@@ -1,0 +1,118 @@
+@startuml
+title Commitment Token
+hide footbox
+
+actor Bob as B
+actor Alice as A
+
+
+
+box "Commitment System" #lightblue
+    participant Coordinator as Coord
+    participant Commitment_Store as Commit
+end box
+
+box "Blockchain" 
+    participant BSV
+    participant Ethereum as E
+end box
+
+group Create NFT
+    
+    A -> Coord: Issuance\n(asset_id, asset_data, BSV)
+    activate A
+    activate Coord
+ 
+    Coord --> A: CPID0, CP0
+    deactivate A
+    deactivate Coord
+
+end 
+
+
+group Transfer NFT from Alice to Bob
+    ' check all is correct
+    ' check UTXO is unspent
+    A -> B : Transfer info\n(CPID0, TxID0, NFT)
+    activate B
+    ...
+
+    group Check Transfer Info
+
+        B -> Coord: Check Transfer Info\n(CPID0, TxID0, NFT)
+        activate Coord
+        note right
+        Bob to check the provided info
+        end note
+
+
+        Coord -> BSV: Check TxID0 output
+        activate BSV
+        
+        note right
+        Check UTXO is unspent
+        end note
+        BSV --> Coord: Unspent
+        deactivate BSV
+
+        Coord -> Commit: Check validity\n(CPID0, TxID0, NFT)
+        activate Commit
+
+        Commit --> Coord: Valid
+        deactivate Commit
+
+        Coord --> B: Success
+        deactivate Coord
+    end
+    ...
+
+    B -> Coord: Template\n(CPID0, ETH)
+    activate Coord
+    note right
+    Bob to create CP transfer template
+    end note
+
+        
+    Coord --> B: CPID1, CP1
+    deactivate Coord
+
+    ...
+    B -> A: Template\n(CPID1)
+    activate A
+
+    note right
+    Alice to sign the CP template
+    and spend the UTXO referenced
+    in CPID0
+    end note
+
+    A -> Coord: Complete(CPID1)
+    activate Coord
+    
+    Coord --> A: CPID1, CP1
+    deactivate Coord
+
+    A --> B: CPID1
+    deactivate A
+
+    group Check Transfer Occured
+    B -> BSV
+    activate BSV
+    BSV --> B : UTXO spent
+    deactivate BSV
+    
+        note right
+        Bob to check UTXO referenced 
+        by CPID0 is spent
+        end note
+
+    end
+
+    deactivate B
+
+end
+
+
+
+
+@enduml

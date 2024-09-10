@@ -1,0 +1,176 @@
+networks:
+  commitment_network:
+    external: false
+    name: commitment_network
+
+
+services:
+
+  # Database
+  db:
+    container_name: database
+    image: mysql
+    cap_add:
+      - SYS_NICE
+    restart: always
+    ports:
+      - "3306:3306"  
+    networks:
+      - commitment_network
+    environment:
+        - MYSQL_ROOT_PASSWORD=mysql
+        - MYSQL_DATABASE=db
+    healthcheck:
+      test: mysqladmin ping -h 127.0.0.1 -u root --password=$$MYSQL_ROOT_PASSWORD
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./db/init:/docker-entrypoint-initdb.d/:ro
+
+
+  # Basic GUI for interacting with database
+  adminer:
+    container_name: db_admin
+    image: adminer
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - 8080:8080
+    networks:
+      - commitment_network
+
+
+  # utxo as a service backend
+  uaas_backend:
+    container_name: uaas_backend
+    image: nchain/rnd-prototyping-uaas-service:v1.1
+    networks:
+      - commitment_network
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./data/uaasr.toml:/app/data/uaasr.toml
+    command: [./uaas]
+
+  # utxo as a service web API
+  uaas_web:
+    container_name: uaas_web
+    build: ./utxo_as_a_service
+    ports:
+      - 5010:5010
+    networks:
+      - commitment_network
+    depends_on:
+      - uaas_backend
+    healthcheck:
+      test: ["CMD", "python3", "isItHealthy.py"]
+      interval: 30s
+      retries: 20
+    volumes:
+      - ./data/uaasr.toml:/app/data/uaasr.toml
+    environment:
+      - URL=http://uaas_web:5010
+    command: [python3, web.py]
+  
+
+  # Financing Service
+  financing_service:
+    container_name: financing_service
+    image: nchain/rnd-prototyping-financing-service:v1.2
+    ports:
+      - 8070:8070
+    networks:
+      - commitment_network
+    volumes:
+      - ./data/financing-service.toml:/app/bin/data/financing-service.toml
+    command: ["/app/bin/financing-service-rust"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://financing_service:8070/status"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+
+  # Commitment Service
+  commitment_service:
+    container_name: commitment_service
+    build: ./python
+    ports:
+      - 8040:8040
+    networks:
+      - commitment_network
+    depends_on:
+      financing_service:
+        condition: service_healthy
+      # - financing_service
+    volumes:
+      - ./data:/app/data
+      - ./python/src:/app/python
+    command: ["python3", "main.py"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://commitment_service:8040/status"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+  
+
+  # Streamlit UI
+  alice_commitment_ui:
+    container_name: alice_commitment_ui
+    build: ./streamlit_ui
+    ports:
+      - 8501:8501
+    networks:
+      - commitment_network
+    volumes:
+      - ./streamlit_ui/src:/app/src
+    environment:
+      - USER_NAME=Alice
+      - COMMITMENT_SERVICE_URL=http://commitment_service:8040
+    depends_on:
+      commitment_service:
+        condition: service_healthy
+    command: ["streamlit", "run", "--server.port", "8501", "--theme.backgroundColor", "#FFFFF2", "main.py"]
+
+  # Streamlit UI
+  bob_commitment_ui:
+    container_name: bob_commitment_ui
+    build: ./streamlit_ui
+    ports:
+      - 8502:8502
+    networks:
+      - commitment_network
+    volumes:
+      - ./streamlit_ui/src:/app/src
+    environment:
+      - USER_NAME=Bob
+      - COMMITMENT_SERVICE_URL=http://commitment_service:8040
+    depends_on:
+      commitment_service:
+        condition: service_healthy
+    command: ["streamlit", "run", "--server.port", "8502", "--theme.backgroundColor", "#F2FFF2", "main.py"]
+
+  # Streamlit UI
+  ted_commitment_ui:
+    container_name: ted_commitment_ui
+    build: ./streamlit_ui
+    ports:
+      - 8503:8503
+    networks:
+      - commitment_network
+    volumes:
+      - ./streamlit_ui/src:/app/src
+    environment:
+      - USER_NAME=Ted
+      - COMMITMENT_SERVICE_URL=http://commitment_service:8040
+    depends_on:
+      commitment_service:
+        condition: service_healthy
+    command: ["streamlit", "run", "--server.port", "8503", "--theme.backgroundColor", "#F2F2FF", "main.py"]
+
+volumes:
+  db_data:
+    labels:
+      com.example.description: "UTXO Database Volume"

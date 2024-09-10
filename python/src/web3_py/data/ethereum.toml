@@ -1,0 +1,28 @@
+[ethereum]
+ethNodeUrl = "https://sepolia.infura.io/v3/"
+apiKey = "25810eab24f5460ca96527cffa737d4f"
+privateKey = "8dcc9c34d6bf487b9cde8f58c78b3a61aca39c248f45a8a21f6a2118040d28de" # charlie
+
+port = 8575             # the port for the Fast API server
+gas = 2000000           # the gas limit, in wei
+gasPrice = 10           # the gas price for the transaction, in gwei
+
+# Chose one of the following options for interface_type: RawTransaction, SmartContract, ERC20
+interface_type = "SmartContract"
+
+[[interface]]
+name = "RawTransaction"
+reuse_account = true   # if true the account will be resued for tokens (nonce % 2)
+
+[[interface]]
+name = "SmartContract"
+contract_pkey = ""
+contract_deployment = "0xf120D32bb10A2aE2971f9Aa026aBE8F0dA9709fb" # if empty a new contract will be created with the constract_account
+abi_filename = "./build/SmartUTXO.abi"
+bytecode_filename = "./build/SmartUTXO.bytecode"
+
+[[interface]]
+name = "ERC20"
+abi_filename = "./build/WildToken.abi"
+bytecode_filename = "./build/WildToken.bytecode"
+

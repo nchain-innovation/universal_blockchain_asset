@@ -1,0 +1,152 @@
+@startuml
+title Commitment Token
+hide footbox
+
+actor Ted as T
+actor Bob as B
+actor Alice as A
+
+
+
+box "Commitment System" #lightblue
+    participant Coordinator as Coord
+    participant Commitment_Store as Commit
+end box
+
+box "Blockchain" 
+    participant BSV
+    participant Ethereum as E
+end box
+
+group Create NFT
+    
+    A -> Coord: Create Record(NFT, BSV)
+    activate A
+    activate Coord
+
+    Coord -> BSV: Create Tx\n(CPID0)
+    activate BSV
+    BSV --> Coord: TxID0
+    deactivate BSV
+    note right
+    Create vout0
+    end note
+
+    Coord -> Commit: Create\nIssuance CP\n(NFT, TxID0)
+    note right
+    Alice signs Issuance CP here
+    end note 
+    activate Commit
+
+    Commit --> Coord: CPID0
+    deactivate Commit
+ 
+    Coord --> A: CPID0, TxID0
+    deactivate A
+    deactivate Coord
+
+end 
+
+
+group Transfer NFT from Alice to Bob
+    ' check all is correct
+    ' check UTXO is unspent
+    A -> B : Transfer info\n(CPID0, TxID0, NFT)
+    activate B
+    ...
+
+    B -> Coord: Check Transfer Info\n(CPID0, TxID0, NFT)
+    activate Coord
+    note right
+    Bob to check the provided info
+    end note
+
+
+    Coord -> BSV: Check TxID0 output
+    activate BSV
+    
+    note right
+    Check UTXO is unspent
+    end note
+    BSV --> Coord: Unspent
+    deactivate BSV
+
+    Coord -> Commit: Check validity\n(CPID0, TxID0, NFT)
+    activate Commit
+
+    Commit --> Coord: Valid
+    deactivate Commit
+
+    Coord --> B: Success
+    deactivate Coord
+    ...
+
+    B -> Coord: Create Transfer Template\n(CPID0, TxID1, NFT, ETH)
+    activate Coord
+    note right
+    Bob to create CP transfer template
+    end note
+
+    
+    Coord -> E : Create Tx
+    activate E
+
+    E --> Coord: TxID1
+    deactivate E
+    
+    Coord -> Commit: nTransfer CP Template\n(CPID0, TxID0, Bobs_pubk)
+    activate Commit
+    Commit --> Coord: CPID1
+    deactivate Commit
+
+    Coord --> B: Template\(CPID1)
+    deactivate Coord
+
+    ...
+    B -> A: Template\(CPID1)
+    activate A
+
+    note right
+    Alice to sign the CP template
+    end note
+
+    A -> Coord: Complete Transfer(CPID1)
+    activate Coord
+    Coord -> Commit: Check validity\n(CPID1)
+    activate Commit
+    Commit --> Coord: Valid
+    deactivate Commit
+
+    Coord -> Commit: Sign Template\n(CPID1)
+    activate Commit
+    Commit --> Coord: CPID1
+    deactivate Commit
+
+
+    Coord -> BSV: Create Spending(TxID0:Outpoint)
+    note right
+    Insert CPID1 here
+    end note
+    activate BSV
+    BSV --> Coord: TXID2
+    deactivate BSV
+
+    Coord --> A: Complete\n(CPID1)
+    deactivate Coord
+
+    A --> B: Complete\n(CPID1)
+    deactivate A
+    deactivate B
+
+end
+
+
+group Transfer NFT from Bob to Ted
+
+    B -> T
+
+end
+
+
+
+@enduml
