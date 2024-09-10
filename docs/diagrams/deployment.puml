@@ -1,0 +1,43 @@
+@startuml
+title title Commitment Token - System Overview
+
+actor An_Actor as A
+note right
+Where An_Actor can be 
+one of {Alice | Bob | Ted}
+end note
+
+package "System" {
+
+    package "Commitment_Service" {
+        Component WebServer
+        Component Service
+        Component Commitment_Store
+    }
+
+    package "Supporting_Components" {
+        Interface Blockchain_Interface
+        Component Financing_Service
+        Component UTXO_as_a_Service as Uaas
+    }
+
+}
+
+
+cloud BSV_Blockchain as Blockchain
+
+Blockchain_Interface .down.> Blockchain
+
+A ..> WebServer: REST_API
+WebServer ..> Service
+
+Service .left.> Commitment_Store
+Service .down.> Financing_Service
+
+Financing_Service .right.> Blockchain_Interface
+Service .down.> Blockchain_Interface
+
+Service ..> Uaas
+Uaas ..> Blockchain
+
+@enduml

@@ -1,0 +1,64 @@
+@startuml
+
+abstract class EthereumInterface {
+    # ethNodeUrl: string
+    # apiKey: string
+    # account: string
+    # privateKey: string
+
+    + {abstract} EthereumInterface(ethNodeUrl: string, apiKey: string, account: string, privateKey: string)
+    + {abstract} create_ownership()
+    + {abstract} spend_ownership()
+    + {abstract} tx_spent_status(): bool
+    + {abstract} check_balance(): float
+    + {abstract} check_ownership(): bool
+}
+
+class RawTransaction {
+    - nonce: int
+    - gasPrice: int
+    - gas: int
+    - to: string
+    - value: int
+    - data: string
+
+    + RawTransaction(ethNodeUrl: string, apiKey: string, account: string, privateKey: string)
+    + create_ownership(): string
+    + spend_ownership(): string
+    + tx_spent_status(): bool
+    + check_balance(): float
+    + check_ownership(): bool
+    + setTransactionData(nonce: int, gasPrice: int, gas: int, to: string, value: int, data: string)
+}
+
+class SmartContract {
+    - contractAddress: string
+
+    + SmartContract(ethNodeUrl: string, apiKey: string, account: string, privateKey: string, contractAddress: string)
+    + create_ownership(): string
+    + spend_ownership(): string
+    + tx_spent_status(): bool
+    + check_balance(): float
+    + check_ownership(): bool
+    + callMethod(method: string, args: any[]): any
+    + sendTransaction(method: string, args: any[]): string
+}
+
+class ERC20 {
+    - contractAddress: string
+
+    + ERC20(ethNodeUrl: string, apiKey: string, account: string, privateKey: string, contractAddress: string)
+    + create_ownership(): string
+    + spend_ownership(): string
+    + tx_spent_status(): bool
+    + check_balance(): float
+    + check_ownership(): bool
+    + transfer(to: string, amount: number): string
+    + balanceOf(account: string): number
+}
+
+EthereumInterface <|-- RawTransaction
+EthereumInterface <|-- SmartContract
+EthereumInterface <|-- ERC20
+
+@enduml

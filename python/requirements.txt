@@ -1,0 +1,17 @@
+pydantic
+toml 
+flake8
+mypy
+docker
+requests
+fastapi
+fastapi_utils
+uvicorn[standard]
+python-multipart
+python-bitcoinrpc
+coincurve
+packaging
+ecdsa 
+web3
+numpy
+tx_engine

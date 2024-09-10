@@ -1,0 +1,138 @@
+@startuml
+title Funding Raw Transactions
+hide footbox
+
+actor Ted
+actor Bob 
+
+
+box "Externally Owned Account" #LightYellow
+    participant funding_acct as FA
+    participant token1_acct as T1
+    participant token2_acct as T2
+end box
+
+
+
+box "Blockchain" 
+    participant Ethereum as E
+end box
+
+activate Bob
+activate FA
+' activate E
+
+group Create Transfer Template \n(Ethereum part only)
+    Bob -> T1: Create new account
+    activate T1
+
+    Bob -> FA: fund new account
+
+    FA -> T1: Transfer funds
+        ' note right
+        ' Create vout0
+        ' end note
+    T1 --> Bob: balance
+    deactivate T1
+
+    Bob -> T1: Get Nonce
+    activate T1
+    T1 --> Bob: Nonce
+    deactivate T1
+
+    Bob -> E: Create raw transaction and sign\n(nonce=0, self-transfer)
+    activate E
+    E --> Bob: tx_hash
+        note right
+        "creation" 
+        transaction 
+        is mined
+        end note
+    deactivate E
+end
+...
+note left of Bob #LightPink
+    Some time later...
+    Transfer from Bob to Ted
+end note
+
+' activate Ted
+group Check Transfer Info\n(Ethereum part only)
+    
+    Ted -> E: Get transaction info\n(tx_hash)
+    activate E
+    activate Ted
+    E --> Ted: tx_receipt\n(account)
+    deactivate E
+
+    Ted -> T1: Get Nonce
+    activate T1
+    T1 --> Ted: Nonce
+      note left
+      if the nonce is < 1 
+      then it is "unspent"
+      end note
+    deactivate T1
+end
+
+group Complete Transfer to Ted
+    ...
+
+    Ted -> Bob: Send Template
+    Bob -> E: Create raw transaction and sign\n(nonce = 1, TXID:Outpoint)
+    activate E
+    E --> Bob: tx_hash
+        note right
+        "spending" 
+        transaction 
+        is mined
+        end note
+    deactivate E
+    Bob --> Ted: completed\n(CPID)
+    deactivate Ted
+end 
+
+Bob -> T1: Reclaim funds
+activate T1
+T1 -> FA: Empty account
+deactivate T1
+
+
+destroy T1
+note over T1 #LightPink
+    end of life for
+    token1_acct 
+    wrt Commitment Tokens
+end note
+...
+note left of Bob #LightBlue
+    Some time later...
+    Bob wants to create a
+    new Token Transfer
+end note
+
+group Repeat with new account
+
+    Bob -> T2: Create new account
+    activate T2
+
+    Bob -> FA: fund new account
+
+    FA -> T2: Transfer funds
+        ' note right
+        ' Create vout0
+        ' end note
+    T2 --> Bob: balance
+    deactivate T2
+end
+
+' end of life for token1_acct
+
+
+
+' deacti vate E
+deactivate FA
+deactivate Bob
+
+@enduml
+
