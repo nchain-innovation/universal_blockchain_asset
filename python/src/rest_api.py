@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from service.commitment_service import commitment_service
 from service.token_description import token_store
 
-from tx_engine.engine.format import bytes_to_wif
+#from tx_engine.engine.format import bytes_to_wif
 
 CONFIG_FILE = "../data/commitment-server.toml" if os.environ.get("APP_ENV") == "docker" else "../../data/commitment-server.toml"
 
@@ -268,7 +268,7 @@ def complete_transfer(commit_transfer_param: CompleteTransferParameters) -> Resp
     else:
         return JSONResponse(content={"message": "Unable to complete a transfer"}, status_code=status.HTTP_400_BAD_REQUEST)
 
-
+'''
 @app.get("/keys/generate_private_key", tags=["KeyManagement"])
 def generate_private_key(curve_id: str) -> Response:
     """ Given a curve return a randomly generated private key in WIF format
@@ -278,5 +278,6 @@ def generate_private_key(curve_id: str) -> Response:
         return JSONResponse(content={"message": f"Unknown curve id {curve_id}"}, status_code=status.HTTP_400_BAD_REQUEST)
 
     key: ecdsa.SigningKey = ecdsa.SigningKey.generate(curve=req_curve)
-    key_wif: str = bytes_to_wif(key.to_string(), 'test')
+    key_wif: str = bytes_to_wif(key.to_string(), 'BSV_Testnet')
     return JSONResponse(content={"message": {'key': key_wif}}, status_code=status.HTTP_200_OK)
+'''
