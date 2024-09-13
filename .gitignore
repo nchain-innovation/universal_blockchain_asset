@@ -1,0 +1,20 @@
+# Compiled Python bytecode
+*.py[cod]
+__pycache__
+
+# Generated data
+data/*.json
+data/*.log
+src/tests/data/*.json
+
+out.txt
+
+# macOS system files
+.DS_Store
+.DS_Store/*
+
+# Environment files
+.env
+
+# Rust target directory
+rust/target
