@@ -111,11 +111,13 @@ class CommitmentService:
     def _broadcast_tx(self, tx: Tx) -> None | Txid:
         """ Given a tx broadcast it and if successful return the Txid
         """
+        print(f'_broadcast_tx -> {tx.serialize().hex()}')
         result = self.blockchain_interface.broadcast_tx(tx.serialize().hex())
         if result is None:
-            print("Failed to broadcast transaction.")
             return None
         else:
+            # the result error code is not being checked. I'll leave this unhelpful 
+            # comment here for now  
             return Txid(tx.id())
 
     def get_funds(self, fee_estimate: int, locking_script: str) -> None | Tuple[TxIn, Tx]:
@@ -349,12 +351,12 @@ class CommitmentService:
         tx_out = TxOut(amount=0, script_pubkey=op_return_script)
         spending_tx = Tx(version=1, tx_ins=[outpoint], tx_outs=[tx_out])
         # This transaction only has 1 input, hence the magic 0 for the index to sign
-        if not wallet.sign_tx_with_input(0, ownership_tx, spending_tx):
-            print("Sign spending tx")
+        signed_spending_tx = wallet.sign_tx_with_input(0,ownership_tx, spending_tx)
+        if signed_spending_tx is None:
+            print("Sign spending tx failed")
             return None
-
-        if self._broadcast_tx(spending_tx) is not None:
-            return spending_tx
+        if self._broadcast_tx(signed_spending_tx) is not None:
+            return signed_spending_tx
         else:
             print("Unable to broadcast tx")
             return None
@@ -665,7 +667,6 @@ class CommitmentService:
             if network == "BSV":
                 outpoint = hexstr_to_txin(outpoint)
                 ownership_tx = hexstr_to_tx(previous_cp_meta.ownership_tx)
-                #spending_tx = self.spend_ownership_tx(actor, network, outpoint, ownership_tx, previous_cp_meta.commitment_packet_id)
                 spending_tx = self.spend_ownership_tx(actor, network, outpoint, ownership_tx, transfer_cp_meta.commitment_packet_id)
             elif network == "ETH":
                 #spending_tx = self.spend_ownership_tx_eth(actor, outpoint, previous_cp_meta.commitment_packet_id)

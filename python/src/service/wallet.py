@@ -43,7 +43,7 @@ class Wallet:
     #def sign_tx_with_inputs(self, input_txs: List[Tx], tx: Tx) -> bool:
     #    return sign_transaction_with_inputs(input_txs, tx, self.private_key)
 
-    def sign_tx_with_input(self, index: int, input_tx: Tx, tx: Tx) -> bool:
+    def sign_tx_with_input(self, index: int, input_tx: Tx, tx: Tx) -> Tx:
         return self.wallet.sign_tx(index, input_tx, tx)
     
     def get_locking_script(self) -> Script:
