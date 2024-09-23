@@ -1,0 +1,108 @@
+[web_interface]
+host = '0.0.0.0'
+port = 8040
+log_level = 'info'
+reload = false
+
+[finance_service]
+url = 'http://financing_service:8070'
+client_id = "uba"
+utxo_cache_enabled = false
+utxo_persistence_enabled = false
+utxo_file = "../data/utxo.json"
+utxo_min_level = 10
+utxo_request_level = 5
+
+[commitment_service]
+# blockchain_enabled = true
+blockchain_enabled = true
+ethereum_enabled = true
+networks = ["BSV", "ETH"]
+
+[ethereum_service]
+ethNodeUrl = "https://sepolia.infura.io/v3/"
+apiKey = ""             # Insert your Infura API key here
+gas = 2000000           # the gas limit, in wei used to work when it was set to 2,000,000
+gasPrice = 51           # the gas price for the transaction, in gwei
+maxGasPrice = 200       # the maximum gas price for the transaction, in gwei (if the gas price is higher, the transaction will not be sent)
+interface_type = "SmartContract"
+
+[[interface]]
+name = "SmartContract"
+contract_pkey = ""
+contract_deployment = "0xf120D32bb10A2aE2971f9Aa026aBE8F0dA9709fb"
+abi_filename = "./web3_py/build/SmartUTXO.abi"
+bytecode_filename = "./web3_py/build/SmartUTXO.bytecode"
+
+
+[commitment_store]
+filepath = "../data/commitments.json"
+
+[blockchain]
+network = "testnet"
+type = "testnet"
+network_type = "testnet"
+interface = "woc"
+interface_type = "woc"
+
+
+[token_info]
+token_file_store = "../data/token_store.json"
+
+[[token]]
+# jpeg launch
+ipfs_cid="QmSgvgwxZGaBLqkGyWemEDqikCqU52XxsYLKtdy3vGZ8uq"
+description="Space Shuttle launch"
+[[token]]
+# bitcoin wp
+ipfs_cid="QmRA3NWM82ZGynMbYzAgYTSXCVM14Wx1RZ8fKP42G6gjgj"
+description="bitcoin whitepaper"
+[[token]]
+# 
+ipfs_cid="QmWoWiPU2vxcTezBGVP6uJ89F8jdoiLgXYGmzEVG48PYyA"
+description="Bambi Thug"
+[[token]]
+# 
+ipfs_cid="AbSgvgwxZGaBLqkGyWemEDqikCqU52XxsYLKtdy3vGZ8uq"
+description="Nemo"
+[[token]]
+# 
+ipfs_cid="AbRA3NWM82ZGynMbYzAgYTSXCVM14Wx1RZ8fKP42G6gjgj"
+description="Baby Lasagna"
+[[token]]
+# 
+ipfs_cid="AbWoWiPU2vxcTezBGVP6uJ89F8jdoiLgXYGmzEVG48PYyA"
+description="Alyona Alyona"
+[[token]]
+# 
+ipfs_cid="BbSgvgwxZGaBLqkGyWemEDqikCqU52XxsYLKtdy3vGZ8uq"
+description="Raiven"
+[[token]]
+# 
+ipfs_cid="BbRA3NWM82ZGynMbYzAgYTSXCVM14Wx1RZ8fKP42G6gjgj"
+description="Olly Alexander"
+[[token]]
+# 
+ipfs_cid="BbWoWiPU2vxcTezBGVP6uJ89F8jdoiLgXYGmzEVG48PYyA"
+description="Angelina Mango"
+
+[[actor]]
+name = "Alice"
+bitcoin_key = ""                # Insert Alices's BSV private key here
+token_key = ""                  # Insert Alices's token private key here  
+token_key_curve = ""            # Insert Alices's key curve here, for example, "NIST256p"
+eth_key = ""                    # Insert Alices's ethereum account private key here 
+
+[[actor]]
+name = "Bob"
+bitcoin_key = ""                # Insert Bob's BSV private key here
+token_key = ""                  # Insert Bob's token private key here  
+token_key_curve = ""            # Insert Bob's key curve here, for example, "NIST256p"
+eth_key = ""                    # Insert Bob's ethereum account private key here 
+
+[[actor]]
+name = "Ted"
+bitcoin_key = ""                # Insert Ted's BSV private key here
+token_key = ""                  # Insert Ted's token private key here  
+token_key_curve = ""            # Insert Ted's key curve here, for example, "NIST256p"
+eth_key = ""                    # Insert Ted's ethereum account private key here 

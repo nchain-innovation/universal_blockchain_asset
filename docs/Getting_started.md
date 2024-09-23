@@ -1,68 +1,115 @@
-# Quick Start
-```bash
-docker compose up
-```
-This project launches the following containers:
+# Getting Started
 
-- commitment_service (python)
-- databases (mysql)
-- db_admin (lightweight database admin tool)
-- uaas_backend (UAAS - Utxo as a Service Rust)
-- uaas_web (UAAS Fast API in Python)
 
 ## System dependencies & components
 
 You need the following to get started:
 
-- Access to the Bitbucket Repository: [commitment-tokens](https://bitbucket.stressedsharks.com/projects/SDL/repos/commitment-tokens)
-- read-access to the nChain Dockerhub Repository: [dockerhub](https://hub.docker.com/?namespace=nchain)
-- Docker Desktop installed on your machine
+- [ ] Docker Desktop installed on your machine
+- [ ] An apiKey for Infura Sepolia - see instructions at [https://docs.infura.io/api/getting-started](https://docs.infura.io/api/getting-started)
+- [ ] Keys for each Actor (Alice, Bob, Ted) 
 
+Keys are required for funding transactions on BSV, for gas on ETH, and for signing the UBA packets.  Either use your pre-existing keys, or create new for the project.  
+
+NB: This demo may be run entirely on the BSV network.  If you do not wish to transfer UBA tokens to and from Ethereum, skip the Ethereum Key Export.  You will still need to add the Infura API key as it is required on startup. 
+
+### Ethereum Configuration ###
+
+Add your Infura Sepolia key to the config file `data\uba-server.toml`
+
+```
+[ethereum_service]
+ethNodeUrl = "https://sepolia.infura.io/v3/"
+apiKey = ""             # Insert your Infura API key here
+```
+
+### Create Keys and add to config files ###
+
+The keys should be added to the toml configuration files in the `data directory`. 
+
+*Ethereum Key Export*
+
+Your ethereum private key can be exported from a metamak as follows:
+> Log in to metamask: Click the three vertical dots next to the account you want to export; On the 'Account details' page, click 'show private key'; Enter your wallet password and click 'Confirm'; Click and hold on 'Hold to reveal Private Key' to display your private key
+
+*BSV Key Export*
+
+BSV key format is wif (wallet import format).  New keys may be easily generated and funded using WildBitTool - see [Wild-Bit-Tool](https://github.com/nchain-innovation/wild-bit-tool)
+
+*Token Key*
+
+The token key is used for signing the UBA packets.  The curve type follows the NIST naming convention, see [pypi ecdsa](https://pypi.org/project/ecdsa/).  For example, to use the secp256r1 curve, set to  
+
+`token_key_curve = "NIST256p"`
+
+**uba-server.toml**
+
+- bitcoin_key (uses secp256k1) - with testnet funds for transactions
+- ethereum_key, with testnet funds on the Sepolia testnet
+- token_key with token_key_curve in NIST naming convention (using the OpenSSL standard)
+
+Edit the configuration file: `data\uba-server.toml` to include the private kes for BSV transactions, Token signing and Ethereum transactions:
+
+```[[actor]]
+name = "Alice"
+bitcoin_key = ""                # Insert Alices's BSV private key here
+token_key = ""                  # Insert Alices's token private key here  
+token_key_curve = ""            # Insert Alices's key curve here, for example, "NIST256p"
+eth_key = ""                    # Insert Alices's ethereum account private key here 
+```
+
+
+**financing-service.toml**
+
+The financing service is used to fund BSV transactions.  It provides an interface to the BSV Blockchain to create the funding transaction outpoints.  From a configuration perspective, you need a funded BSV account on Testnet.  Copy the private key in wif format into the configuration file:    `data\financing-service.toml` 
+
+```
+[[client]]
+client_id = "uba"
+wif_key = ""    # Insert the funding account's private key here
+```
+
+This will fund all BSV transactions in the demo, regardless of the "owner" of the UBA packet.
+
+# Launch
+
+From the top level directory run: 
+
+```bash
+docker compose up
+```
+This project launches the following containers:
+
+- uba_service (python)
+- financing_service (rust)
+- Alice's UI (Streamlit)
+- Bob's UI (Streamlit)
+- Ted's UI (Streamlit)
 ## High level overview
 
 ### **Network**
 
-Docker Compose creates a network if it doesn't already exist named **commitment_network.**
+Docker Compose creates a network if it doesn't already exist named **uba_network.**
 
 Containers that wish to connect to each other need to be part of the same network.
 
 Applications such as browsers and executables running on the host system can access exposed ports. For example,
 
-- commitment service is exposed on [http://localhost:8040/](http://localhost:5003/)
-- uaas_web is exposed on [http://localhost:5010/](http://localhost:5010/)
-- db_admin is exposed on [http://localhost:8080/](http://localhost:8080/)
+- uba service is exposed on [http://localhost:8040/docs](http://localhost:8040/docs)
+- Alice's UI is exposed on [http://localhost:8501/](http://localhost:8501/)
+- Bob's UI is exposed on [http://localhost:8502/](http://localhost:8502/)
+- Ted's UI is exposed on [http://localhost:8503/](http://localhost:8503/)
 
-### **Volumes**
 
-Docker Compose creates one named volume if it does not already exist:
 
-- **commitment-tokens_db_data** contains database data (i.e. the uaas blockchain data)
+### Uba Service
 
-The volume may be deleted either via Docker Desktop, or the command line.
+Configuration:
 
-Deleting the database data removes all tables, users, and block history created by the uaas_backend.
+Add various keys to the uba-server.toml file
+Line 19: apiKey for sepolia.infura.io
 
-### **Database**
 
-This uses the official Dockerhub **mysql** image.
-
-The mysql root password is specified in the docker_compose.yml file, see `MYSQL_ROOT_PASSWORD`
-
-The UTXO-as-a-service database is initialised via the script: `/db/init/01_init.sql` The script sets up the uaas user, creates the `uaas_db` table and grants appropriate privileges.
-
-NB: when changing the database username/password in the initialisation script, ensure the change is reflected in toml files for services that require database access (e.g. utxo_as_service)
-
-### **Database Admin**
-
-The lightweight db_admin tool is found at [http://localhost:8080/](http://localhost:8080/)
-
-Login to the db database using the root user and password (see docker-compose.yml `MYSQL_ROOT_PASSWORD`)
-
-Select the uaas_db database from the drop down and use the `select` statements to explore the tables.
-
-### Commitment Service
-
-\<to fill in - blah blah>
 
 ### **Financing Service**
 
@@ -74,27 +121,4 @@ The config data is found in:
 
 The most significatant parts are:
 
-`[client]` - this maps the client id to the wif (i.e. the client's funding key).
-
-### **UTXO As A Service**
-
-UTXO as a service has two containers:
-
-- uaas_backend
-- uaas_web
-
-They share the common config file:
-
-`data/uaasr.toml`
-
-The Rusty Backend works out of the box (i.e. downloads the image and runs it).
-
-The Python Web images is used as a base for a new image which has an "isItHealthy.py" script added. The health script allows Docker Compose to determine when the uaas_web is ready via a health-check.
-
-The most significant parts of the config file are:
-
-`start_block_hash` - use a recent block hash
-
-`start_block_height` - use the matching block height
-
-NB: if you change the db user and password in the database initialisation script, ensure the uaasr.toml file reflect the change.
+`[client]` - this maps the client id to the wif (i.e. the client's funding key).  NB: you will need a BSV testnet key with funds to 

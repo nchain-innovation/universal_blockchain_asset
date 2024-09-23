@@ -6,16 +6,22 @@ This project consists of the following directories:
 ```
 .
 ├── data
-│   └── commitment-tokens.toml
 ├── docs
 │   └── diagrams
-└── src
+├── python
+│   └── src
+│       ├── ethereum
+│       ├── service
+│       ├── tests
+│       └── web3_py
+└── streamlit_ui
 ```
 
 These directories contain the following:
 * `data` - Configuration and data used by this project, this is where the data is stored
 * `docs` - Project documentation and UML diagrams
-* `src` - The source for backend server 
+* `python` - The source for backend server 
+* `streamlit_ui` - The source for the UI 
 
 
 ## Working without Blockchain

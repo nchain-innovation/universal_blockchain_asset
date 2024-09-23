@@ -23,6 +23,12 @@ class EthereumWallet:
         """ Given the wallet configuration, set up the wallet"""
         self.ethNodeUrl = ethereum_config["ethNodeUrl"]
         self.apiKey = ethereum_config["apiKey"]
+
+        # Check if the apiKey is set
+        if not self.apiKey:
+            print("Error: Infura API key is not set in the configuration.")
+            sys.exit(1)
+
         self.gas = ethereum_config["gas"]
         self.gasPrice = ethereum_config["gasPrice"]
         self.maxGasPrice = ethereum_config["maxGasPrice"]
@@ -31,7 +37,7 @@ class EthereumWallet:
         block_gas_limit = self.get_block_gas_limit()
 
         # self.gas = min(self.gas, block_gas_limit)
-        print(f"JAS: DEBUG: Gas limit: {self.gas}, Block gas limit: {block_gas_limit}")
+        # print(f"DEBUG: Gas limit: {self.gas}, Block gas limit: {block_gas_limit}")
 
     def set_account(self, eth_key: str):
         self.account = Account.from_key(eth_key)
@@ -87,7 +93,7 @@ class EthereumWallet:
     def get_block_gas_limit(self):
         current_block = self.web3.eth.block_number
         block_gas_limit = self.web3.eth.get_block(current_block)['gasLimit']
-        print(f"JAS: DEBUG: Current block gas limit: {block_gas_limit}")
+        # print(f"DEBUG: Current block gas limit: {block_gas_limit}")
         return block_gas_limit
 
     def update_gas_price(self, num_transactions=10):
