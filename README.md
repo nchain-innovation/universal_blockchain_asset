@@ -9,7 +9,7 @@ The reference used for this work is
 
 # Configuration
 
-Please refer to the [Getting Started](#docs/Getting_started) page for configuration prerequisites, i.e. key/account creation.
+Please refer to the [Getting Started](docs/Getting_started.md) page for configuration prerequisites, i.e. key/account creation.
 
 
 
@@ -21,7 +21,7 @@ At the top level, run:
 docker compose up
 ```
 
-For more information about getting the project started see [here](#docs/Getting_started).
+For more information about getting the project started see [here](docs/Getting_started.md).
 
 # Resetting the data
 
@@ -40,4 +40,4 @@ To restart cleanly, please delete the following files in the `data` directory:
 
 # Development Information
 
-For information about developing the project see [here](#docs/Development).
+For information about developing the project see [here](docs/Development.md).
