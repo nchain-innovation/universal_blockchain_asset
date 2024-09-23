@@ -2,6 +2,7 @@ import pprint
 import hashlib
 import os
 import ecdsa
+import sys
 
 from typing import NewType, Tuple, Any, Dict, List
 pp = pprint.PrettyPrinter()
@@ -43,32 +44,54 @@ class CommitmentService:
         self.ethereum_service: EthereumService = EthereumService()
 
     def set_actors(self, config: ConfigType):
-        """ Read the actors from the configuration
+        """ Read the actors from the configuration and validate their keys
         """
-        for actor in config["actor"]:
-            bitcoin_key = actor['bitcoin_key']
-            name = actor['name']
-            token_key = actor['token_key']
-            token_key_curve = actor['token_key_curve']
+        try: 
+            for actor in config["actor"]:
+                name = actor['name']
+                bitcoin_key = actor.get('bitcoin_key')
+                token_key = actor.get('token_key')
+                token_key_curve = actor.get('token_key_curve')
+                eth_key = actor.get('eth_key')
 
-            wallet = Wallet()
-            wallet.set_wif(bitcoin_key)
-            self.actors_wallets[name] = wallet
+                # Check if the required keys are set
+                if not bitcoin_key:
+                    raise ValueError(f"Bitcoin key for {name} is not set")
+                if not token_key:
+                    raise ValueError(f"Token key for {name} is not set")
+                if not token_key_curve:
+                    raise ValueError(f"Token key curve for {name} is not set")
+                if not eth_key:
+                    raise ValueError(f"Ethereum key for {name} is not set")
 
-            token_wallet = TokenWallet()
-            token_wallet.set_key(token_key, token_key_curve)
-            self.actors_token_wallets[name] = token_wallet
+                wallet = Wallet()
+                try:
+                    wallet.set_wif(bitcoin_key)
+                except Exception as e:
+                    print(f"Error setting WIF for {name}: {e}")
+                    sys.exit(1)
+                self.actors_wallets[name] = wallet
 
-            try:
-                eth_key: str = actor["eth_key"]
+                token_wallet = TokenWallet()
+                token_wallet.set_key(token_key, token_key_curve)
+                self.actors_token_wallets[name] = token_wallet
+
                 eth_wallet = EthereumWallet()
                 print(f"Setting up Ethereum wallet for {name}")
                 eth_wallet.set_config(config)
                 eth_wallet.set_account(eth_key)
                 self.actors_eth_wallets[name] = eth_wallet
-            except KeyError:
-                # print(f'Ethereum not enabled for user {name} {e}')
-                pass
+
+        except KeyError as e:
+            print(f"Configuration error: Missing key {e}")
+            sys.exit(1)
+        except TypeError:
+            print("Configuration error: 'config' is not properly set or 'actor' is not a list")
+            sys.exit(1)
+        except ValueError as e:
+            print(f"Configuration error: {e}")
+            sys.exit(1)
+
 
     def set_config(self, config: ConfigType):
         """ Given the configuration, configure this service
@@ -77,7 +100,7 @@ class CommitmentService:
 
         if self.blockchain_enabled:
             self.finance_service.set_config(config)
-            self.uaas_service.set_config(config)
+            # self.uaas_service.set_config(config)
             # Blockchain interface
             self.blockchain_network = config["blockchain"]["network"]
             self.blockchain_interface = interface_factory.set_config(config["blockchain"])

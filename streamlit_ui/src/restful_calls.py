@@ -36,7 +36,6 @@ def get_half_baked_commitments(actor):
 
     url = f"{st.session_state.commitment_service_url}/commitments/transfers?actor={actor}"
     print(f"Getting half-baked for {actor}")
-    # url = f"{st.session_state.commitment_service_url}/commitments?actor={actor}"
     headers = {'accept': 'application/json'}
     response = requests.get(url, headers=headers)
 

@@ -1,0 +1,15 @@
+[blockchain_interface]
+# For bsv testnet (default)
+interface_type = "woc"
+network_type = "testnet"
+
+[web_interface]
+address = '127.0.0.1'
+port = 8070
+
+[logging]
+level = "debug"
+
+[[client]]
+client_id = "uba"
+wif_key = ""    # Insert the funding account's private key here
