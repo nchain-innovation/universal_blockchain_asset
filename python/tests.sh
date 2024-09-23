@@ -7,5 +7,5 @@ SRC_DIR=$(realpath ./src)
 docker run -it \
     --mount type=bind,source=$SRC_DIR,target=/app/python \
     --mount type=bind,source=$DATA_DIR,target=/app/data \
-    --rm commitment_service \
+    --rm uba_service \
     bash -c "cd tests && python3 -m unittest discover"

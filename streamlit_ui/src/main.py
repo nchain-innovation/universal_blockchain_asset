@@ -6,8 +6,8 @@ from restful_calls import get_actors, get_networks
 # Get environment variables
 if os.environ.get('USER_NAME') is not None:
     USER_NAME = os.environ['USER_NAME']
-if os.environ.get('COMMITMENT_SERVICE_URL') is not None:
-    COMMITMENT_SERVICE_URL = os.environ['COMMITMENT_SERVICE_URL']
+if os.environ.get('UBA_SERVICE_URL') is not None:
+    UBA_SERVICE_URL = os.environ['UBA_SERVICE_URL']
 
 # Initialize session state
 if 'current_step' not in st.session_state:
@@ -29,10 +29,10 @@ if 'previous_cpid' not in st.session_state:
     st.session_state['previous_cpid'] = None
 
 if 'commitment_service_url' not in st.session_state:
-    if COMMITMENT_SERVICE_URL is None:
+    if UBA_SERVICE_URL is None:
         print("COMMITMENT_SERVICE_URL environment variable not set")
         exit(1)
-    st.session_state['commitment_service_url'] = COMMITMENT_SERVICE_URL
+    st.session_state['commitment_service_url'] = UBA_SERVICE_URL
 
 if 'actors' not in st.session_state:
     st.session_state['actors'] = get_actors()

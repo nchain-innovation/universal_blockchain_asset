@@ -1,3 +1,3 @@
 #!/bin/bash
 
-docker build --tag "commitment_service" --file Dockerfile .
+docker build --tag "uba_service" --file Dockerfile .
