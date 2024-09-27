@@ -247,7 +247,7 @@ class CommitmentService:
         return None
 
     def cp_meta_to_status(self, cpid: str, cp: CommitmentPacketMetadata) -> Dict[str, Any]:
-        retval = cp.dict()
+        retval = cp.model_dump()
         del retval["ownership_tx"]
         del retval["spending_tx"]
         if retval["type"] == "Issuance":

@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 import unittest
+from unittest.mock import patch, mock_open
 import os
 import sys
 sys.path.append("..")
@@ -20,17 +21,20 @@ TOKEN_FILE_STORE = '../../data/token_store.json'
 CONFIG = {
     'actor': [
         {'name': 'Alice',
-            'token_key': 'cVvay9F4wkxrC6cLwThUnRHEajQ8FNoDEg1pbsgYjh7xYtkQ9LVZ',
-            'token_key_curve': 'SECP256k1',
-            'bitcoin_key': 'cVvay9F4wkxrC6cLwThUnRHEajQ8FNoDEg1pbsgYjh7xYtkQ9LVZ'},
+            'token_key': '91tohTNiSH4newk8q8X6D4zZ36xABwG7MWUC9KTJHUvJZVBoLo3',
+            'token_key_curve': 'NIST256p',
+            'bitcoin_key': 'cVvay9F4wkxrC6cLwThUnRHEajQ8FNoDEg1pbsgYjh7xYtkQ9LVZ',
+            'eth_key': '57afe53e85961095022411ab379e3a4a73d30b9ee1684b2b1979715c2d67a0bd'},
         {'name': 'Bob',
-            'token_key': 'cP1oascUTcrkYf9Ws9XkfESaL7yKJA8a3fxxT3D57gubDD6Va51D',
-            'token_key_curve': 'SECP256k1',
-            'bitcoin_key': 'cP1oascUTcrkYf9Ws9XkfESaL7yKJA8a3fxxT3D57gubDD6Va51D'},
+            'token_key': '91ppjc4SCw8AFyAS8o7UzaD793M4dnExKwJ13f28WMek9KhUhmn',
+            'token_key_curve': 'NIST256p',
+            'bitcoin_key': 'cP1oascUTcrkYf9Ws9XkfESaL7yKJA8a3fxxT3D57gubDD6Va51D',
+            'eth_key': '8dcc9c34d6bf487b9cde8f58c78b3a61aca39c248f45a8a21f6a2118040d28de'},
         {'name': 'Ted',
-            'token_key': 'cNCvcVZ7tespNwKywAELCgyCQqoQExpzDPccaMFj3zDE1MZPRDPx',
-            'token_key_curve': 'SECP256k1',
-            'bitcoin_key': 'cNCvcVZ7tespNwKywAELCgyCQqoQExpzDPccaMFj3zDE1MZPRDPx'}
+            'token_key': '92Gbcgn1L6LNisT6ztuFEa41QAynpmdJD7U9DBNRDT2BJxP1deE',
+            'token_key_curve': 'NIST256p',
+            'bitcoin_key': 'cNCvcVZ7tespNwKywAELCgyCQqoQExpzDPccaMFj3zDE1MZPRDPx',
+            'eth_key': '8ac317c9ad1af866bdd18cf2b52733eaa34cd969269c78dcf2365c46b0399074'},
     ],
     'blockchain': {
         'interface': 'woc',
@@ -44,6 +48,13 @@ CONFIG = {
         'blockchain_enabled': True,
         'ethereum_enabled': False,
         'networks': ['BSV', 'ETH']
+    },
+    'ethereum_service': {
+        'ethNodeUrl': 'https://sepolia.infura.io/v3/',
+        'apiKey': '25810eab24f5460ca96527cffa737d4f',
+        'gas': '2000000',
+        'gasPrice': '20000000000',
+        'maxGasPrice': '20000000000'
     },
     'commitment_store': {
         'filepath': COMMITMENT_STORE_FILE
@@ -73,15 +84,10 @@ FUNDS = [
 ]
 
 
-class CommitmentServiceTests(unittest.TestCase):
+class TestCommitmentService(unittest.TestCase):
     """ Exercise the CommitmentService
     """
     def setUp(self):
-        if True:
-            try:
-                os.remove(COMMITMENT_STORE_FILE)
-            except FileNotFoundError:
-                pass
 
         # Mock bsv client
         self.mock_bsv_client = MockInterface()
@@ -99,7 +105,9 @@ class CommitmentServiceTests(unittest.TestCase):
         self.cs.finance_service = self.mock_financing_service  # type: ignore[assignment]
         token_store.set_config(CONFIG)
 
-    def test_issuance(self):
+    @patch("builtins.open", new_callable=mock_open, read_data='{"key": "value"}')
+    @patch("os.path.exists", return_value=True)
+    def test_issuance(self, mock_exists, mock_open):
         """ Test the creation of an issuance commitment packet
         """
         result = self.cs.create_issuance_commitment("Alice", "asset_id", "asset_data", "BSV")
@@ -115,7 +123,9 @@ class CommitmentServiceTests(unittest.TestCase):
         txid = list(self.mock_bsv_client.broadcast.keys())[0]
         self.assertEqual(cp.blockchain_outpoint, txid + ":1")
 
-    def test_issuance_and_template(self):
+    @patch("builtins.open", new_callable=mock_open, read_data='{"key": "value"}')
+    @patch("os.path.exists", return_value=True)
+    def test_issuance_and_template(self, mock_exists, mock_open):
         """ Test the creation of an issuance commitment packet
             followed by the creation of a cpmmitment packet for transfer
         """
@@ -145,7 +155,9 @@ class CommitmentServiceTests(unittest.TestCase):
         txid = list(self.mock_bsv_client.broadcast.keys())[1]
         self.assertEqual(cp2.blockchain_outpoint, txid + ":1")
 
-    def test_issuance_and_transfer(self):
+    @patch("builtins.open", new_callable=mock_open, read_data='{"key": "value"}')
+    @patch("os.path.exists", return_value=True)
+    def test_issuance_and_transfer(self, mock_exists, mock_open):
         """ Test the creation of an issuance commitment packet
             followed by the creation of a commitment packet for transfer
             and the completition of the transfer

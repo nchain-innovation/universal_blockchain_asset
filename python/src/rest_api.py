@@ -41,7 +41,7 @@ def get_commitment_metadata_by_cpid(cpid: str) -> Response:
     if commitment is None:
         return JSONResponse(content={"message": "Unable to find any UBA Packets"}, status_code=status.HTTP_400_BAD_REQUEST)
     else:
-        serialisable_commitment = commitment.dict()
+        serialisable_commitment = commitment.model_dump()
         return JSONResponse(content={"message": serialisable_commitment}, status_code=status.HTTP_200_OK)
 
 
@@ -84,7 +84,7 @@ def get_commitments_by_actor(actor: str) -> Response:
     if commitments == []:
         return JSONResponse(content={"message": "Unable to find any UBAs"}, status_code=status.HTTP_400_BAD_REQUEST)
     else:
-        serialisable_commitments = [{c[0]: c[1].dict()} for c in commitments]
+        serialisable_commitments = [{c[0]: c[1].model_dump()} for c in commitments]
         return JSONResponse(content={"message": serialisable_commitments}, status_code=status.HTTP_200_OK)
 
 
@@ -99,7 +99,7 @@ def get_transfers_by_actor(actor: str) -> Response:
     if commitments == []:
         return JSONResponse(content={"message": "Unable to find any UBAs"}, status_code=status.HTTP_400_BAD_REQUEST)
     else:
-        serialisable_commitments = [{c[0]: c[1].dict() if hasattr(c[1], 'dict') else c[1]} for c in commitments]
+        serialisable_commitments = [{c[0]: c[1].model_dump() if hasattr(c[1], 'dict') else c[1]} for c in commitments]
         return JSONResponse(content={"message": serialisable_commitments}, status_code=status.HTTP_200_OK)
 
 
@@ -156,7 +156,7 @@ def commitment_detail_by_actor(actor: str) -> Response:
         key = c[0]
         value = c[1]
         if hasattr(value, 'dict'):
-            serialisable_commitment_list.append({key: value.dict()})
+            serialisable_commitment_list.append({key: value.model_dump()})
         else:
             serialisable_commitment_list.append({key: value})
 
@@ -202,7 +202,7 @@ def create_issuance_commitment(commit_param: IssuanceParameters) -> Response:
         commit_param.actor, commit_param.asset_id, commit_param.asset_data, commit_param.network)
     if cpid_commitment is not None:
         (cpid, commitment) = cpid_commitment
-        serialised_commitment = commitment.dict()
+        serialised_commitment = commitment.model_dump()
         return JSONResponse(content={"message": {cpid: serialised_commitment}}, status_code=status.HTTP_200_OK)
     else:
         return JSONResponse(content={"message": "Unable to create UBA packet"}, status_code=status.HTTP_400_BAD_REQUEST)
@@ -237,7 +237,7 @@ def create_transfer_template(commit_transfer_param: TemplateParameters) -> Respo
             commit_transfer_param.cpid, commit_transfer_param.actor, commit_transfer_param.network)
         if cpid_commitment is not None:
             (cpid, commitment) = cpid_commitment
-            serialised_commitment = commitment.dict()
+            serialised_commitment = commitment.model_dump()
             return JSONResponse(content={"message": {cpid: serialised_commitment}}, status_code=status.HTTP_200_OK)
         else:
             return JSONResponse(content={"message": "Unable to create a transfer UBA packet template"}, status_code=status.HTTP_400_BAD_REQUEST)
@@ -268,7 +268,7 @@ def complete_transfer(commit_transfer_param: CompleteTransferParameters) -> Resp
     cpid_commitment = commitment_service.complete_transfer(commit_transfer_param.cpid, commit_transfer_param.actor)
     if cpid_commitment is not None:
         (cpid, commitment) = cpid_commitment
-        serialised_commitment = commitment.dict()
+        serialised_commitment = commitment.model_dump()
         return JSONResponse(content={"message": {cpid: serialised_commitment}}, status_code=status.HTTP_200_OK)
     else:
         return JSONResponse(content={"message": "Unable to complete a transfer"}, status_code=status.HTTP_400_BAD_REQUEST)

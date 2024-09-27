@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 import unittest
+from unittest.mock import patch, mock_open
 import os
 import sys
 sys.path.append("..")
@@ -50,18 +51,21 @@ class CommitmentStoreTests(unittest.TestCase):
         self.cs = CommitmentStore()
         self.cs.set_config(CONFIG)
 
-    def test_load(self):
+    @patch("builtins.open", new_callable=mock_open, read_data='[]')
+    @patch("os.path.exists", return_value=True)
+    def test_load(self, mock_exists, mock_open):
         self.cs.load()
         self.assertEqual(self.cs.commitments, [])
 
-    def test_save_and_load(self):
+    @patch("builtins.open", new_callable=mock_open, read_data='[]')
+    @patch("os.path.exists", return_value=True)
+    def test_save_and_load(self, mock_exists, mock_open):
         # Create Issuance Commitment Packet
         actor = "Alice"
         network = "BSV"
         asset_id = "person"
         asset_data = "Murphy"
 
-        #vin = TxIn(prev_tx=bytes(16), prev_index=0)
         vin = TxIn(prev_tx="00000000000000000000000000000000", prev_index=0)
         utxo_tx = Tx(1, [], [], 0)
 
@@ -89,10 +93,13 @@ class CommitmentStoreTests(unittest.TestCase):
             commitment_packet=cp
         )
         self.cs.add_commitment(cp_meta)
-
         self.cs.save()
+
+        # Mock the file read to return the saved data
+        mock_open().read.return_value = '[{"owner": "Alice", "type": "Issuance", "state": "Created", "ownership_tx": "01000000000000000000", "spending_tx": "", "commitment_packet_id": "test_cpid", "commitment_packet": {"asset_id": "person", "data": "Murphy", "previous_packet": null, "signature": "", "signature_scheme": "", "public_key": "", "blockchain_outpoint": "PyTxIn { prev_tx: \\"00000000000000000000000000000000\\", prev_index: 0, sequence: 4294967295, script_sig: \\"\\" }", "blockchain_id": "BSV"}}]'
         self.cs.reset()
         self.assertEqual(self.cs.commitments, [])
+        
         self.cs.load()
 
         CP_META = CommitmentPacketMetadata(

@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 import unittest
+from unittest.mock import patch, mock_open
 import os
 import sys
 import hashlib
@@ -20,20 +21,30 @@ CONFIG = {
         {'name': 'Alice',
             'token_key': '91tohTNiSH4newk8q8X6D4zZ36xABwG7MWUC9KTJHUvJZVBoLo3',
             'token_key_curve': 'NIST256p',
-            'bitcoin_key': 'cVvay9F4wkxrC6cLwThUnRHEajQ8FNoDEg1pbsgYjh7xYtkQ9LVZ'},
+            'bitcoin_key': 'cVvay9F4wkxrC6cLwThUnRHEajQ8FNoDEg1pbsgYjh7xYtkQ9LVZ',
+            'eth_key': '57afe53e85961095022411ab379e3a4a73d30b9ee1684b2b1979715c2d67a0bd'},
         {'name': 'Bob',
             'token_key': '91ppjc4SCw8AFyAS8o7UzaD793M4dnExKwJ13f28WMek9KhUhmn',
             'token_key_curve': 'NIST256p',
-            'bitcoin_key': 'cP1oascUTcrkYf9Ws9XkfESaL7yKJA8a3fxxT3D57gubDD6Va51D'},
+            'bitcoin_key': 'cP1oascUTcrkYf9Ws9XkfESaL7yKJA8a3fxxT3D57gubDD6Va51D',
+            'eth_key': '8dcc9c34d6bf487b9cde8f58c78b3a61aca39c248f45a8a21f6a2118040d28de'},
         {'name': 'Ted',
             'token_key': '92Gbcgn1L6LNisT6ztuFEa41QAynpmdJD7U9DBNRDT2BJxP1deE',
             'token_key_curve': 'NIST256p',
-            'bitcoin_key': 'cNCvcVZ7tespNwKywAELCgyCQqoQExpzDPccaMFj3zDE1MZPRDPx'}
+            'bitcoin_key': 'cNCvcVZ7tespNwKywAELCgyCQqoQExpzDPccaMFj3zDE1MZPRDPx',
+            'eth_key': '8ac317c9ad1af866bdd18cf2b52733eaa34cd969269c78dcf2365c46b0399074'},
     ],
     'commitment_service': {
         'blockchain_enabled': False,
         'ethereum_enabled': False,
         'networks': ['BSV', 'ETH']
+    },
+    'ethereum_service': {
+        'ethNodeUrl': 'https://sepolia.infura.io/v3/',
+        'apiKey': '25810eab24f5460ca96527cffa737d4f',
+        'gas': '2000000',
+        'gasPrice': '20000000000',
+        'maxGasPrice': '20000000000'
     },
     'commitment_store': {
         'filepath': COMMITMENT_STORE_FILE
@@ -77,7 +88,9 @@ class CommitmentServiceTests(unittest.TestCase):
         self.assertTrue(self.cs.is_known_network("BSV"))
         self.assertFalse(self.cs.is_known_network("BTC"))
 
-    def test_issuance(self):
+    @patch("builtins.open", new_callable=mock_open, read_data='{"key": "value"}')
+    @patch("os.path.exists", return_value=True)
+    def test_issuance(self, mock_exists, mock_open):
         """ Test the creation of an issuance commitment packet
         """
         result = self.cs.create_issuance_commitment("Alice", "asset_id", "asset_data", "BSV")
@@ -102,12 +115,13 @@ class CommitmentServiceTests(unittest.TestCase):
         self.assertFalse(self.cs.can_complete_transfer(cpid, "Alice"))
         self.assertFalse(self.cs.can_complete_transfer(cpid, "Bob"))
 
-    def test_issuance_and_template(self):
+    @patch("builtins.open", new_callable=mock_open, read_data='{"key": "value"}')
+    @patch("os.path.exists", return_value=True)
+    def test_issuance_and_template(self, mock_exists, mock_open):
         """ Test the creation of an issuance commitment packet
-            followed by the creation of a cpmmitment packet for transfer
+            followed by the creation of a commitment packet for transfer
         """
         result = self.cs.create_issuance_commitment("Alice", "asset_id", "asset_data", "BSV")
-        # print(f"result1 = {result}")
         self.assertIsNotNone(result)
         assert result is not None
         (cpid, cp) = result
@@ -115,7 +129,6 @@ class CommitmentServiceTests(unittest.TestCase):
         self.assertTrue(isinstance(cp, CommitmentPacket))
 
         result = self.cs.create_transfer_template(cpid, "Bob", "BSV")
-        # print(f"result2 = {result}")
         self.assertIsNotNone(result)
         assert result is not None
         (cpid2, cp2) = result
@@ -142,10 +155,12 @@ class CommitmentServiceTests(unittest.TestCase):
         self.assertFalse(self.cs.can_complete_transfer(cpid2, "Ted"))
         self.assertFalse(self.cs.can_complete_transfer(cpid2, "Fred"))
 
-    def test_issuance_and_transfer(self):
+    @patch("builtins.open", new_callable=mock_open, read_data='{"key": "value"}')
+    @patch("os.path.exists", return_value=True)
+    def test_issuance_and_transfer(self, mock_exists, mock_open):
         """ Test the creation of an issuance commitment packet
             followed by the creation of a commitment packet for transfer
-            and the completition of the transfer
+            and the completion of the transfer
         """
         result = self.cs.create_issuance_commitment("Alice", "asset_id", "asset_data", "BSV")
         # print(f"result1 = {result}")
@@ -199,12 +214,14 @@ class CommitmentServiceTests(unittest.TestCase):
         self.assertTrue(self.cs.can_transfer(cpid3, "Alice", is_owner=False))
         self.assertTrue(self.cs.can_transfer(cpid3, "Ted", is_owner=False))
 
-    def test_issuance_and_transfer_and_transfer(self):
+    @patch("builtins.open", new_callable=mock_open, read_data='{"key": "value"}')
+    @patch("os.path.exists", return_value=True)
+    def test_issuance_and_transfer_and_transfer(self, mock_exists, mock_open):
         """ Test the creation of an issuance commitment packet
             followed by the creation of a commitment packet for transfer
-            and the completion of the transfer
-            and transfer again
+            and another transfer
         """
+        # Create issuance commitment
         result = self.cs.create_issuance_commitment("Alice", "asset_id", "asset_data", "BSV")
         self.assertIsNotNone(result)
         assert result is not None
@@ -212,13 +229,32 @@ class CommitmentServiceTests(unittest.TestCase):
         self.assertTrue(isinstance(cpid, str))
         self.assertTrue(isinstance(cp, CommitmentPacket))
 
-        # Transfer Alice -> Bob
+        # Create first transfer template (Alice -> Bob)
         result = self.cs.create_transfer_template(cpid, "Bob", "BSV")
         self.assertIsNotNone(result)
         assert result is not None
         (cpid2, cp2) = result
         self.assertTrue(isinstance(cpid2, str))
         self.assertTrue(isinstance(cp2, CommitmentPacket))
+        # Check ids differ
+        self.assertNotEqual(cpid, cpid2)
+        # Check expected data matches
+        self.assertEqual(cp2.asset_id, 'asset_id')
+        self.assertEqual(cp2.data, 'asset_data')
+        self.assertEqual(cp2.blockchain_id, 'BSV')
+        # Check linked to previous_packet
+        self.assertEqual(cp2.previous_packet, cpid)
+        # Check signature is not completed
+        self.assertIsNone(cp2.signature)
+        # Check public_key signature is completed
+        self.assertNotEqual(cp2.public_key, cp.public_key)
+
+        # Check Commitment state
+        # Can Alice complete the transfer? (yes)
+        self.assertTrue(self.cs.can_complete_transfer(cpid2, "Alice"))
+        # Can Bob complete the transfer? (no)
+        self.assertFalse(self.cs.can_complete_transfer(cpid2, "Bob"))
+        self.assertFalse(self.cs.can_complete_transfer(cpid2, "Ted"))
 
         result = self.cs.complete_transfer(cpid2, "Alice")
         # verify the signature
@@ -240,6 +276,7 @@ class CommitmentServiceTests(unittest.TestCase):
 
         self.assertTrue(isinstance(cpid3, str))
         self.assertTrue(isinstance(cp3, CommitmentPacket))
+        # Check ids differ
         self.assertEqual(cpid2, cpid3)
         self.assertEqual(cp2, cp3)
         self.assertNotEqual(cpid, cpid3)
