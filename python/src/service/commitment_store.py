@@ -25,7 +25,7 @@ class CommitmentStore:
 
     def save(self) -> bool:
         # Convert to something we can write out
-        serialisable_commitments = [c.dict() for c in self.commitments]
+        serialisable_commitments = [c.model_dump() for c in self.commitments]
         with open(self.filepath, 'w') as f:
             json.dump(serialisable_commitments, f, indent=4)
         return True
@@ -35,7 +35,7 @@ class CommitmentStore:
         try:
             with open(self.filepath, 'r') as f:
                 serial_data = json.load(f)
-            self.commitments = [CommitmentPacketMetadata.parse_obj(cp) for cp in serial_data]
+            self.commitments = [CommitmentPacketMetadata.model_validate(cp) for cp in serial_data]
         except (FileNotFoundError, json.JSONDecodeError) as e:
             # Got fed up of this printing during unit tests
             if not is_unit_test():
