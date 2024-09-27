@@ -77,12 +77,16 @@ def startup():
 # return status
 @app.get("/status")
 def status():
+    if eth is None:  # Added check
+        raise HTTPException(status_code=500, detail="Ethereum interface is not initialized")
     return eth.is_connected()
 
 
 # Get the balance of the account in Ether
 @app.get("/getBalance")
 async def getBalance() -> float:
+    if eth is None:  # Added check
+        raise HTTPException(status_code=500, detail="Ethereum interface is not initialized")
     try:
         balance = eth.check_balance()
         return balance
@@ -93,6 +97,8 @@ async def getBalance() -> float:
 # Create the Ownership transaction
 @app.post("/createOwnership")
 def createOwnership():
+    if eth is None:  # Added check
+        raise HTTPException(status_code=500, detail="Ethereum interface is not initialized")
 
     if isERC20(eth):
         try:
@@ -125,6 +131,9 @@ def createOwnership():
 # Create the spend ownership transaction
 @app.post("/spendOwnership")
 def spendOwnership(txid: str, CPID: str):
+    if eth is None:  # Added check
+        raise HTTPException(status_code=500, detail="Ethereum interface is not initialized")
+
     try:
         tx_hash = eth.spend_ownership(txid, CPID)
         return {"tx_hash": tx_hash}
@@ -136,6 +145,9 @@ def spendOwnership(txid: str, CPID: str):
 # Check the unspent status of a transaction
 @app.get("/txSpentStatus")
 def txSpentStatus(tx_hash: str):
+    if eth is None:  # Added check
+        raise HTTPException(status_code=500, detail="Ethereum interface is not initialized")
+
     try:
         status = eth.tx_spent_status(tx_hash=tx_hash)
         return {"status": status}
@@ -146,6 +158,9 @@ def txSpentStatus(tx_hash: str):
 # Get the CPID of a txid
 @app.get("/getCPID")
 def getCPID(txid: str):
+    if eth is None:
+        raise HTTPException(status_code=500, detail="Ethereum interface is not initialized")
+
     try:
         cpid = eth.get_cpid(txid)
         return {"CPID": cpid}
@@ -156,6 +171,9 @@ def getCPID(txid: str):
 # get the event and utxo from a txid
 @app.get("/getEventAndUtxo")
 def getEventAndUtxo(txid: str):
+    if eth is None:
+        raise HTTPException(status_code=500, detail="Ethereum interface is not initialized")
+
     try:
         event, utxo = eth.get_event_and_utxo(txid)
         return {"event": event, "utxo": utxo}

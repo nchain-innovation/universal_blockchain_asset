@@ -36,5 +36,4 @@ def tx_to_hexstr(tx: Tx | None) -> str | None:
 
 def hexstr_to_txin(txin_as_hexstr: str) -> TxIn:
     input = txin_as_hexstr.split(':')
-    return TxIn(prev_tx = input[0], prev_index=int(input[1]))
-
+    return TxIn(prev_tx=input[0], prev_index=int(input[1]))

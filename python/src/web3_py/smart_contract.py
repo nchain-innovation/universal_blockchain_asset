@@ -16,10 +16,14 @@ class SmartContract:
         for obj in config["interface"]:
             if obj["name"] == "SmartContract":
                 interface_confg = obj
+                break
+
+        if interface_confg is None:
+            raise ValueError("SmartContract interface configuration not found")
 
         # Read from the config file to get abi_filename and bytecode_filename, and contract owner
         required_fields = ['abi_filename', 'bytecode_filename', 'contract_pkey', 'contract_deployment']
-        # print(interface_confg)
+
         if not all(field in interface_confg for field in required_fields):
             missing_fields = [field for field in required_fields if field not in interface_confg]
             raise ValueError(f"Missing required fields in configuration: {', '.join(missing_fields)}")
@@ -30,6 +34,9 @@ class SmartContract:
         self.bytecode = self._load_bytecode(bytecode_filename)
 
         self.contract_deployment = interface_confg['contract_deployment']
+        self.gas = config['ethereum_service']['gas']
+        self.gasPrice = config['ethereum_service']['gasPrice']
+
         if interface_confg['contract_pkey'] == "":
             print("Contract owner private key not found in config")
         else:
@@ -107,7 +114,7 @@ class SmartContract:
 
         # Get the contract instance
         if self.contract is None:
-            self.contract = self.web3.eth.contract(address=self.contract.address, abi=self.contract.abi)
+            self.contract = self.web3.eth.contract(address=self.contract_deployment, abi=self.abi)
 
         # Parse the logs
         logs = self.contract.events.UTXOCreated().process_receipt(tx_receipt)
@@ -243,7 +250,7 @@ class SmartContract:
 
             # Get the contract instance
             if self.contract is None:
-                self.contract = self.web3.eth.contract(address=self.contract.address, abi=self.contract.abi)
+                self.contract = self.web3.eth.contract(address=self.contract_deployment, abi=self.abi)
 
             # Process the logs for the UTXOCreated event
             created_logs = self.contract.events.UTXOCreated().process_receipt(tx_receipt)

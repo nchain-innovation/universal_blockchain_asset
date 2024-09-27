@@ -2,6 +2,7 @@ import ecdsa
 from config import ConfigType
 from tx_engine import wif_to_bytes
 
+
 class TokenWallet:
     """ This class represents the Wallet functionality for token signing
     """

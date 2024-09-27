@@ -34,7 +34,6 @@ class EthereumWallet:
         self.maxGasPrice = ethereum_config["maxGasPrice"]
         self.web3 = Web3(Web3.HTTPProvider(self.ethNodeUrl + self.apiKey))
         print(f"EthNodeUrl: {self.ethNodeUrl} is connected: {self.web3.is_connected()}")
-        block_gas_limit = self.get_block_gas_limit()
 
         # self.gas = min(self.gas, block_gas_limit)
         # print(f"DEBUG: Gas limit: {self.gas}, Block gas limit: {block_gas_limit}")
@@ -126,9 +125,9 @@ class EthereumWallet:
             average_gas_price = int(sum(gas_prices) / len(gas_prices))
             print(f"Average gas price: {average_gas_price}")
 
-            if average_gas_price < self.maxGasPrice:
+            if average_gas_price < int(self.maxGasPrice):
                 print(f"Updating gas price from {self.gasPrice} to {average_gas_price}")
-                self.gasPrice = average_gas_price
+                self.gasPrice = str(average_gas_price)
                 return True
             else:
                 print(f"Average gas price exceeds the maximum allowed value of {self.maxGasPrice}.")

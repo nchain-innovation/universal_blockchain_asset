@@ -1,22 +1,16 @@
 import os
-import ecdsa
 
 from fastapi import FastAPI, Response, status
 from fastapi.responses import JSONResponse
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from pydantic import BaseModel
 
 from service.commitment_service import commitment_service
 from service.token_description import token_store
 
-#from tx_engine.engine.format import bytes_to_wif
-
 CONFIG_FILE = "../data/uba-server.toml" if os.environ.get("APP_ENV") == "docker" else "../../data/uba-server.toml"
 
-
-# Restful API guidence
-# https://confluence.stressedsharks.com/display/PCREC/How+To%3A+Build+RESTful+APIs#HowTo:BuildRESTfulAPIs-HTTPmethods
 
 tags_metadata = [
     {
@@ -105,7 +99,7 @@ def get_transfers_by_actor(actor: str) -> Response:
     if commitments == []:
         return JSONResponse(content={"message": "Unable to find any UBAs"}, status_code=status.HTTP_400_BAD_REQUEST)
     else:
-        serialisable_commitments = [{c[0]: c[1].dict()} for c in commitments]
+        serialisable_commitments = [{c[0]: c[1].dict() if hasattr(c[1], 'dict') else c[1]} for c in commitments]
         return JSONResponse(content={"message": serialisable_commitments}, status_code=status.HTTP_200_OK)
 
 
@@ -148,13 +142,24 @@ def tokens_by_actor(actor: str) -> Response:
 @app.get("/commitment_detail_by_actor", tags=["Tokens"])
 def commitment_detail_by_actor(actor: str) -> Response:
     """ Returns a list of UBA packets owned by actor that are available
-        for purcahse by others
+        for purchase by others
     """
     if not commitment_service.is_known_actor(actor):
         return JSONResponse(content={"message": f"Unknown actor {actor}"}, status_code=status.HTTP_400_BAD_REQUEST)
 
     commit_packet_list = commitment_service.commitment_packets_owned_by_actor(actor)
-    serialisable_commitment_list = [{c[0]: c[1].dict()} for c in commit_packet_list]
+    if commit_packet_list is None:
+        return JSONResponse(content={"message": "No commitment packets found"}, status_code=status.HTTP_400_BAD_REQUEST)
+
+    serialisable_commitment_list = []
+    for c in commit_packet_list:
+        key = c[0]
+        value = c[1]
+        if hasattr(value, 'dict'):
+            serialisable_commitment_list.append({key: value.dict()})
+        else:
+            serialisable_commitment_list.append({key: value})
+
     return JSONResponse(content={"message": serialisable_commitment_list}, status_code=status.HTTP_200_OK)
 
 
@@ -165,7 +170,7 @@ def commitment_transaction_hash(cpid: str) -> Response:
     if not commitment_service.is_known_cpid(cpid):
         return JSONResponse(content={"message": "Unable to find any UBA Packets"}, status_code=status.HTTP_400_BAD_REQUEST)
 
-    tx_hash: str = commitment_service.get_commitment_tx_hash(cpid)
+    tx_hash: Optional[str] = commitment_service.get_commitment_tx_hash(cpid)
     if tx_hash is None:
         return JSONResponse(content={"message": f"Unknown cpid {cpid}"}, status_code=status.HTTP_400_BAD_REQUEST)
     return JSONResponse(content={"message": {'Commitment_TX_Hash': tx_hash}}, status_code=status.HTTP_200_OK)
@@ -267,5 +272,3 @@ def complete_transfer(commit_transfer_param: CompleteTransferParameters) -> Resp
         return JSONResponse(content={"message": {cpid: serialised_commitment}}, status_code=status.HTTP_200_OK)
     else:
         return JSONResponse(content={"message": "Unable to complete a transfer"}, status_code=status.HTTP_400_BAD_REQUEST)
-
-
