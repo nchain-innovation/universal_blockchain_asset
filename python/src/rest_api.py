@@ -84,7 +84,9 @@ def get_commitments_by_actor(actor: str) -> Response:
     if commitments == []:
         return JSONResponse(content={"message": "Unable to find any UBAs"}, status_code=status.HTTP_400_BAD_REQUEST)
     else:
-        serialisable_commitments = [{c[0]: c[1].model_dump()} for c in commitments]
+        serialisable_commitments = [
+            {c[0]: c[1].model_dump() if hasattr(c[1], 'model_dump') else c[1]} for c in commitments
+        ]
         return JSONResponse(content={"message": serialisable_commitments}, status_code=status.HTTP_200_OK)
 
 
@@ -99,7 +101,9 @@ def get_transfers_by_actor(actor: str) -> Response:
     if commitments == []:
         return JSONResponse(content={"message": "Unable to find any UBAs"}, status_code=status.HTTP_400_BAD_REQUEST)
     else:
-        serialisable_commitments = [{c[0]: c[1].model_dump() if hasattr(c[1], 'dict') else c[1]} for c in commitments]
+        serialisable_commitments = [
+            {c[0]: c[1].model_dump() if hasattr(c[1], 'model_dump') else c[1]} for c in commitments
+        ]
         return JSONResponse(content={"message": serialisable_commitments}, status_code=status.HTTP_200_OK)
 
 
@@ -155,10 +159,10 @@ def commitment_detail_by_actor(actor: str) -> Response:
     for c in commit_packet_list:
         key = c[0]
         value = c[1]
-        if hasattr(value, 'dict'):
+        if hasattr(value, 'model_dump'):
             serialisable_commitment_list.append({key: value.model_dump()})
         else:
-            serialisable_commitment_list.append({key: value})
+            serialisable_commitment_list.append({key: value.__dict__})
 
     return JSONResponse(content={"message": serialisable_commitment_list}, status_code=status.HTTP_200_OK)
 
