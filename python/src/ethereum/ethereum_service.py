@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import sys
 sys.path.append("..")
@@ -35,12 +35,19 @@ class EthereumService:
         elif self.eth_type == "ERC20":
             raise NotImplementedError
 
-    def get_status(self) -> None | Dict[str, Any]:
+    def get_status(self) -> None | Optional[Dict[str, Any]]:
         """ Return the status of the Ethereum interface, so that we know if it is connected
             return dictionary of information if present
             and None if connection failed
         """
-        return self.web3.is_connected()
+        if self.web3.is_connected():
+            return {
+                "status": "connected",
+                "network_id": self.web3.net.version,
+                "latest_block": self.web3.eth.block_number
+            }
+        else:
+            return None
 
     def is_ownership_tx_spent(self, txid: str) -> None | bool:
         """ Given an tx reference return true if it has been spent

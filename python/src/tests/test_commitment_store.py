@@ -99,7 +99,7 @@ class CommitmentStoreTests(unittest.TestCase):
         mock_open().read.return_value = '[{"owner": "Alice", "type": "Issuance", "state": "Created", "ownership_tx": "01000000000000000000", "spending_tx": "", "commitment_packet_id": "test_cpid", "commitment_packet": {"asset_id": "person", "data": "Murphy", "previous_packet": null, "signature": "", "signature_scheme": "", "public_key": "", "blockchain_outpoint": "PyTxIn { prev_tx: \\"00000000000000000000000000000000\\", prev_index: 0, sequence: 4294967295, script_sig: \\"\\" }", "blockchain_id": "BSV"}}]'
         self.cs.reset()
         self.assertEqual(self.cs.commitments, [])
-        
+
         self.cs.load()
 
         CP_META = CommitmentPacketMetadata(

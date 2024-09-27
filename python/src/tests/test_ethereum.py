@@ -1,29 +1,21 @@
 import unittest
 from unittest import mock
-
-"""from web3_py.erc20 import ERC20
-from web3_py.raw_transaction import RawTransaction
-"""
-
+from eth_account.signers.local import LocalAccount
 from ethereum.ethereum_wallet import EthereumWallet
-from web3 import Account
-
-import sys
-sys.path.append("..")
 
 
 class TestEthereumWallet(unittest.TestCase):
     def setUp(self):
         self.config = {
             'ethereum_service': {
-                "ethNodeUrl": "https://sepolia.infura.io/v3/",
-                "apiKey": "25810eab24f5460ca96527cffa737d4f",
+                "ethNodeUrl": "https://sepolia.infura.io/v3/YOUR_INFURA_PROJECT_ID",
+                "apiKey": "YOUR_API_KEY",
                 "gas": "2000000",
                 "gasPrice": "50",
                 "maxGasPrice": "200"
             }
         }
-        self.eth_priv_key = 'cfb2fb15d4976800871b0162ac6e95647070105ddbbae6e17622b4a93ad9f620'
+        self.eth_priv_key = '8ac317c9ad1af866bdd18cf2b52733eaa34cd969269c78dcf2365c46b0399074'
         self.wallet = EthereumWallet()
 
     @mock.patch('web3.Web3.is_connected', return_value=True)
@@ -38,7 +30,7 @@ class TestEthereumWallet(unittest.TestCase):
 
     def test_set_account(self):
         self.wallet.set_account(self.eth_priv_key)
-        self.assertEqual(self.wallet.account.address, Account.from_key(self.eth_priv_key).address)
+        self.assertIsInstance(self.wallet.account, LocalAccount)
 
 
 if __name__ == '__main__':

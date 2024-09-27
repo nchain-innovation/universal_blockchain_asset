@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 import unittest
 from unittest.mock import patch, mock_open
-import os
 import sys
 sys.path.append("..")
 
