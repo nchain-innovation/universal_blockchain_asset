@@ -36,7 +36,7 @@ CONFIG = {
         'interface': 'woc',
             'network': 'testnet',
             'type': 'testnet',
-            'interface_type':'mock',
+            'interface_type': 'mock',
             'uaas_address': 'http://127.0.0.1:5010',
             'uaas_collections': ['commitment']
     },

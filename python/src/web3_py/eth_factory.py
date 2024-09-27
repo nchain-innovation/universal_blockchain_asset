@@ -33,7 +33,9 @@ def ethereum_interface_factory(interface_type, ethNodeUrl, apiKey, privateKey, g
 
     # Smart contract - uses events for signalling state changes
     elif interface_type == 'SmartContract':
-        return SmartContract(ethNodeUrl, apiKey, privateKey, gas, gasPrice, config)
+        print("TODO: Reinstate Smart Contract")
+        return None
+        # return SmartContract(ethNodeUrl, apiKey, privateKey, gas, gasPrice, config)
 
     # ERC20 token - conforms to the ERC20 standard
     elif interface_type == 'ERC20':

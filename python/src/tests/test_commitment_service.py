@@ -171,8 +171,12 @@ class CommitmentServiceTests(unittest.TestCase):
         (cpid3, cp3) = result
         # verify the signature
         c: ecdsa.curves.Curve = ecdsa.curves.curve_by_name(cp3.signature_scheme)
-        self.assertTrue(verify_signature(cp3.packet_digest(), cp.public_key, bytes.fromhex(cp3.signature), c, hashlib.sha256))
-
+        if cp.public_key is None:
+            self.fail("Public key is None")
+        elif cp3.signature is None:
+            self.fail("Signature is None")
+        else:
+            self.assertTrue(verify_signature(cp3.packet_digest(), cp.public_key, bytes.fromhex(cp3.signature), c, hashlib.sha256))
         self.assertTrue(isinstance(cpid3, str))
         self.assertTrue(isinstance(cp3, CommitmentPacket))
         self.assertEqual(cp2, cp3)
@@ -198,11 +202,10 @@ class CommitmentServiceTests(unittest.TestCase):
     def test_issuance_and_transfer_and_transfer(self):
         """ Test the creation of an issuance commitment packet
             followed by the creation of a commitment packet for transfer
-            and the completition of the transfer
+            and the completion of the transfer
             and transfer again
         """
         result = self.cs.create_issuance_commitment("Alice", "asset_id", "asset_data", "BSV")
-        # print(f"result1 = {result}")
         self.assertIsNotNone(result)
         assert result is not None
         (cpid, cp) = result
@@ -211,7 +214,6 @@ class CommitmentServiceTests(unittest.TestCase):
 
         # Transfer Alice -> Bob
         result = self.cs.create_transfer_template(cpid, "Bob", "BSV")
-        # print(f"result2 = {result}")
         self.assertIsNotNone(result)
         assert result is not None
         (cpid2, cp2) = result
@@ -220,16 +222,22 @@ class CommitmentServiceTests(unittest.TestCase):
 
         result = self.cs.complete_transfer(cpid2, "Alice")
         # verify the signature
-        c: ecdsa.curves.Curve = ecdsa.curves.curve_by_name(cp2.signature_scheme)
-        self.assertTrue(verify_signature(cp2.packet_digest(), cp.public_key, bytes.fromhex(cp2.signature), c, hashlib.sha256))
+        curve1: ecdsa.curves.Curve = ecdsa.curves.curve_by_name(cp2.signature_scheme)
+        if cp.public_key is None or cp2.signature is None:
+            self.fail("Public key or signature is None")
+        else:
+            self.assertTrue(verify_signature(cp2.packet_digest(), cp.public_key, bytes.fromhex(cp2.signature), curve1, hashlib.sha256))
 
-        # print(f"result3 = {result}")
         self.assertIsNotNone(result)
         assert result is not None
         (cpid3, cp3) = result
         # verify the signature
-        c: ecdsa.curves.Curve = ecdsa.curves.curve_by_name(cp3.signature_scheme)
-        self.assertTrue(verify_signature(cp3.packet_digest(), cp.public_key, bytes.fromhex(cp3.signature), c, hashlib.sha256))
+        curve2: ecdsa.curves.Curve = ecdsa.curves.curve_by_name(cp3.signature_scheme)
+        if cp.public_key is None or cp3.signature is None:
+            self.fail("Public key or signature is None")
+        else:
+            self.assertTrue(verify_signature(cp3.packet_digest(), cp.public_key, bytes.fromhex(cp3.signature), curve2, hashlib.sha256))
+
         self.assertTrue(isinstance(cpid3, str))
         self.assertTrue(isinstance(cp3, CommitmentPacket))
         self.assertEqual(cpid2, cpid3)
@@ -237,16 +245,12 @@ class CommitmentServiceTests(unittest.TestCase):
         self.assertNotEqual(cpid, cpid3)
 
         # Transfer Bob -> Ted
-        # print(f'cp by Bob -> {cp2}')
-
         result = self.cs.create_transfer_template(cpid2, "Ted", "BSV")
-        # print(f"result4 = {result}")
         self.assertIsNotNone(result)
         assert result is not None
         (cpid4, cp4) = result
         self.assertTrue(isinstance(cpid4, str))
         self.assertTrue(isinstance(cp4, CommitmentPacket))
-
         result = self.cs.complete_transfer(cpid4, "Bob")
         # print(f"result3 = {result}")
         self.assertIsNotNone(result)
