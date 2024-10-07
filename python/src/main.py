@@ -62,9 +62,7 @@ def main():
     is_financing_service_present = commitment_service.test_financing_service()
     if not is_financing_service_present:
         print(f"is_financing_service_present = {is_financing_service_present}")
-        # Only stop if blockchain enabled
-        if commitment_service.blockchain_enabled:
-            return
+        return
 
     run_webserver(config)
 

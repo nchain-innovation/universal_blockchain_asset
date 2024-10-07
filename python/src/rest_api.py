@@ -63,14 +63,7 @@ def get_commitment_transaction(cpid: str) -> Response:
 def get_commitment_status(cpid: str) -> Response:
     """ Given the cpid return the Commitment status
     """
-    if not commitment_service.is_known_cpid(cpid):
-        return JSONResponse(content={"message": "Unable to find any UBA Packets"}, status_code=status.HTTP_400_BAD_REQUEST)
-    else:
-        result = commitment_service.get_commitment_status(cpid)
-        if result is None:
-            return JSONResponse(content={"message": "Unable to find transaction"}, status_code=status.HTTP_400_BAD_REQUEST)
-        else:
-            return JSONResponse(content={"message": result}, status_code=status.HTTP_200_OK)
+    return JSONResponse(content={"message": "Not implemented"}, status_code=status.HTTP_501_NOT_IMPLEMENTED)
 
 
 @app.get("/commitments", tags=["Tokens"])

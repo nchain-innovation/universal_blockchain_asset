@@ -1,6 +1,5 @@
 import requests
 import logging
-import json
 import time
 from packaging import version
 from typing import Any, Dict
@@ -19,26 +18,11 @@ class FinancingService:
     def __init__(self):
         self.service_url: str
         self.client_id: str
-        self.utxo_cache_enabled: bool
-        self.utxo_persistence_enabled: bool
-        self.utxo_file: str
-        self.utxo_min_level: int
-        self.utxo_request_level: int
-        self.utxo = {}
 
     def set_config(self, config: ConfigType):
         """ Given the configuration, configure this service"""
         self.service_url = config["finance_service"]["url"]
         self.client_id = config["finance_service"]["client_id"]
-        # cache stuff
-        self.utxo_cache_enabled = config["finance_service"]["utxo_cache_enabled"]
-        self.utxo_persistence_enabled = config["finance_service"]["utxo_persistence_enabled"]
-        self.utxo_file = config["finance_service"]["utxo_file"]
-        self.utxo_min_level = config["finance_service"]["utxo_min_level"]
-        self.utxo_request_level = config["finance_service"]["utxo_request_level"]
-        # if configured load utxo
-        if self.utxo_cache_enabled:
-            self.load_utxo()
 
     def _check_version(self, data: Dict[str, Any]):
         """ Throw exception if Financing service is version is below MIN_VERSION
@@ -91,34 +75,7 @@ class FinancingService:
     def get_funds(self, fee_estimate: int, locking_script: str) -> None | Dict[str, Any]:
         """ Get the funds for one tx
         """
-        if self.utxo_cache_enabled:
-            # if below the threshold get more tx in the cache
-            if locking_script in self.utxo:
-                if len(self.utxo[locking_script]) < self.utxo_min_level:
-                    result = self._get_funds(fee_estimate, locking_script, self.utxo_request_level, False)
-                    if result is None:
-                        return None
-                    else:
-                        # add them to the cache
-                        assert result["status"] == "Success"
-                        self.utxo[locking_script].extend(result["outpoints"])
-            else:
-                result = self._get_funds(fee_estimate, locking_script, self.utxo_request_level, False)
-                if result is None:
-                    return None
-                else:
-                    # add them to the cache
-                    assert result["status"] == "Success"
-                    if locking_script not in self.utxo:
-                        self.utxo[locking_script] = []
-                    self.utxo[locking_script].extend(result["outpoints"])
-            # Pop outpoint off the cache
-            utxo = self.utxo[locking_script].pop()
-            # Save utxo
-            self.save_utxo()
-            return {"status": "Success", "outpoints": [utxo]}
-        else:
-            return self._get_funds(fee_estimate, locking_script, 1, False)
+        return self._get_funds(fee_estimate, locking_script, 1, False)
 
     def _get_funds(self, fee_estimate: int, locking_script: str, no_of_outpoints: int, multiple_tx: bool) -> None | Dict[str, Any]:
         """ Underlying get_funds call
@@ -137,27 +94,3 @@ class FinancingService:
         else:
             LOGGER.debug(f"response = {response}")
         return data
-
-    def load_utxo(self):
-        if self.utxo_persistence_enabled:
-            try:
-                with open(self.utxo_file, 'r') as f:
-                    self.utxo = json.load(f)
-            except FileNotFoundError:
-                pass
-
-    def save_utxo(self):
-        if self.utxo_persistence_enabled:
-            # Convert to something we can write out
-            with open(self.utxo_file, 'w') as f:
-                json.dump(self.utxo, f)
-
-    def cache_enabled(self) -> bool:
-        return self.utxo_cache_enabled
-
-    def cache_size(self) -> int:
-        sz = 0
-        if self.utxo_cache_enabled:
-            for v in self.utxo.values():
-                sz += len(v)
-        return sz

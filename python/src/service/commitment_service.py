@@ -1,6 +1,5 @@
 import pprint
 import hashlib
-import os
 import sys
 import ecdsa
 
@@ -14,7 +13,6 @@ from tx_engine import Tx, TxIn, TxOut, Script
 
 from service.commitment_packet import CommitmentPacket, CommitmentPacketMetadata, CommitmentStatus, Cpid, CommitmentType
 from service.financing_service import FinancingService, FinancingServiceException
-from service.uaas_service import UaaSService
 from service.wallet import Wallet
 from service.token_wallet import TokenWallet, verify_signature
 from service.commitment_store import CommitmentStore
@@ -31,15 +29,12 @@ class CommitmentService:
     """ A  service for creating commitment tokens
     """
     def __init__(self):
-        self.blockchain_enabled: bool = False
         self.finance_service = FinancingService()
-        self.uaas_service = UaaSService()
         self.actors_wallets: Dict[str, Wallet] = {}
         self.actors_token_wallets: Dict[str, TokenWallet] = {}
         self.actors_eth_wallets: Dict[str, EthereumWallet] = {}
         self.networks: List[str] = []
         self.commitment_store: CommitmentStore = CommitmentStore()
-        self.ethereum_enabled: bool = False
         self.ethereum_service: EthereumService = EthereumService()
 
     def set_actors(self, config: ConfigType):
@@ -92,18 +87,16 @@ class CommitmentService:
     def set_config(self, config: ConfigType):
         """ Given the configuration, configure this service
         """
-        self.blockchain_enabled = config["commitment_service"]["blockchain_enabled"]
 
-        if self.blockchain_enabled:
-            self.finance_service.set_config(config)
-            # self.uaas_service.set_config(config)
-            # Blockchain interface
-            self.blockchain_network = config["blockchain"]["network"]
-            self.blockchain_interface = interface_factory.set_config(config["blockchain"])
+        # Financing service
+        self.finance_service.set_config(config)
 
-        self.ethereum_enabled = config["commitment_service"]["ethereum_enabled"]
-        if self.ethereum_enabled:
-            self.ethereum_service.set_config(config)
+        # BSV
+        self.blockchain_network = config["blockchain"]["network"]
+        self.blockchain_interface = interface_factory.set_config(config["blockchain"])
+
+        # Ethereum
+        self.ethereum_service.set_config(config)
 
         self.set_actors(config)
         self.networks = config["commitment_service"]["networks"]
@@ -116,16 +109,13 @@ class CommitmentService:
     def test_financing_service(self) -> bool:
         """ Return True if financing service working
         """
-        if self.blockchain_enabled:
-            try:
-                self.finance_service.get_status()
-            except FinancingServiceException as e:
-                print(f"exception {e}")
-                return False
-            else:
-                return True
-        else:
+        try:
+            self.finance_service.get_status()
+        except FinancingServiceException as e:
+            print(f"exception {e}")
             return False
+        else:
+            return True
 
     def _broadcast_tx(self, tx: Tx) -> None | Txid:
         """ Given a tx broadcast it and if successful return the Txid
@@ -171,24 +161,13 @@ class CommitmentService:
         """ Return the service status
         """
         # eth wallets are connected
-        if self.blockchain_enabled:
-            return {
-                "status": "running",
-                "blockchain_enabled": self.blockchain_enabled,
-                "finance_cache_enabled": self.finance_service.cache_enabled(),
-                "finance_cache_size": self.finance_service.cache_size(),
-                "finance_get_balance": self.finance_service.get_balance(),
-                "actors": list(self.actors_wallets.keys()),
-                "networks": self.networks,
-                "ethereum_connected": self.ethereum_service.get_status(),
-            }
-        else:
-            return {
-                "status": "running",
-                "blockchain_enabled": self.blockchain_enabled,
-                "actors": list(self.actors_wallets.keys()),
-                "networks": self.networks,
-            }
+        return {
+            "status": "running",
+            "finance_get_balance": self.finance_service.get_balance(),
+            "actors": list(self.actors_wallets.keys()),
+            "networks": self.networks,
+            "ethereum_connected": self.ethereum_service.get_status(),
+        }
 
     def is_known_actor(self, name: str) -> bool:
         """ Return true if actor is known
@@ -259,10 +238,6 @@ class CommitmentService:
                 txid_and_index = cp.commitment_packet.get_blockchain_txid_and_index()
                 if txid_and_index is not None:
                     (txid, index) = txid_and_index
-                    if self.blockchain_enabled:
-                        result = self.uaas_service.has_outpoint_been_spent(txid, index)
-                        if result is not None:
-                            retval["commitment_packet"]["blockchain_outpoint_spent"] = result
                     retval["commitment_packet"]["blockchain_outpoint_link"] = f"https://test.whatsonchain.com/tx/{txid}"
             case _:
                 raise NotImplementedError(f"Unknown network '{network}'")
@@ -428,27 +403,11 @@ class CommitmentService:
         assert (token_store.check_token_id(asset_data))
 
         # Create utxo
-        if self.blockchain_enabled:
-            result = self.create_ownership_tx(actor, network)
-            if result is None:
-                # Return error
-                return None
-            (vin, utxo_tx) = result
-        else:
-            match network:
-                case 'BSV':
-                    vin = TxIn(prev_tx="00000000000000000000000000000000", prev_index=0)
-                    utxo_tx = Tx(1, [], [], 0)
-                case 'ETH':
-                    # Generate a random string
-                    random_string = os.urandom(16)
-                    # Create a hash object
-                    hash_object = hashlib.sha256()
-                    # Update the hash object with the random string
-                    hash_object.update(random_string)
-                    # Get the hexadecimal representation of the hash
-                    vin = hash_object.hexdigest()
-                    utxo_tx = hash_object.hexdigest()
+        result = self.create_ownership_tx(actor, network)
+        if result is None:
+            # Return error
+            return None
+        (vin, utxo_tx) = result
 
         match network:
             case 'BSV':
@@ -570,27 +529,11 @@ class CommitmentService:
             print('Issue with orignal ownersip {orignal_cp_meta.owner} on token_id {orignal_cp_meta.commitment_packet.data}')
         # Create transfer template
         # Create utxo
-        if self.blockchain_enabled:
-            result = self.create_ownership_tx(actor, network)
-            if result is None:
-                # Return error
-                return None
-            (vin, utxo_tx) = result
-        else:
-            match network:
-                case 'BSV':
-                    vin = TxIn(prev_tx="00000000000000000000000000000000", prev_index=0)
-                    utxo_tx = Tx(1, [], [], 0)
-                case 'ETH':
-                    # Generate a random string
-                    random_string = os.urandom(16)
-                    # Create a hash object
-                    hash_object = hashlib.sha256()
-                    # Update the hash object with the random string
-                    hash_object.update(random_string)
-                    # Get the hexadecimal representation of the hash
-                    vin = hash_object.hexdigest()
-                    utxo_tx = hash_object.hexdigest()
+        result = self.create_ownership_tx(actor, network)
+        if result is None:
+            # Return error
+            return None
+        (vin, utxo_tx) = result
 
         # Create commitment packet
 
@@ -681,25 +624,22 @@ class CommitmentService:
             return None
 
         # Create a spending tx
-        if self.blockchain_enabled:
-            network = previous_cp_meta.commitment_packet.blockchain_id
-            outpoint = previous_cp_meta.commitment_packet.blockchain_outpoint
-            assert outpoint is not None
+        network = previous_cp_meta.commitment_packet.blockchain_id
+        outpoint = previous_cp_meta.commitment_packet.blockchain_outpoint
+        assert outpoint is not None
 
-            if network == "BSV":
-                outpoint = hexstr_to_txin(outpoint)
-                ownership_tx = hexstr_to_tx(previous_cp_meta.ownership_tx)
-                spending_tx = self.spend_ownership_tx(actor, network, outpoint, ownership_tx, transfer_cp_meta.commitment_packet_id)
-            elif network == "ETH":
-                spending_tx = self.spend_ownership_tx_eth(actor, outpoint, transfer_cp_meta.commitment_packet_id)
-            else:
-                print(f"Unknown network {network}")
-                return None
-            if spending_tx is None:
-                print(f"Unable to spend outpoint {outpoint} on {network}")
-                return None
+        if network == "BSV":
+            outpoint = hexstr_to_txin(outpoint)
+            ownership_tx = hexstr_to_tx(previous_cp_meta.ownership_tx)
+            spending_tx = self.spend_ownership_tx(actor, network, outpoint, ownership_tx, transfer_cp_meta.commitment_packet_id)
+        elif network == "ETH":
+            spending_tx = self.spend_ownership_tx_eth(actor, outpoint, transfer_cp_meta.commitment_packet_id)
         else:
-            spending_tx = None
+            print(f"Unknown network {network}")
+            return None
+        if spending_tx is None:
+            print(f"Unable to spend outpoint {outpoint} on {network}")
+            return None
 
         # Sign commitment packet
         transfer_cp_meta.commitment_packet = self.sign_commitment_packet(actor, transfer_cp_meta.commitment_packet)

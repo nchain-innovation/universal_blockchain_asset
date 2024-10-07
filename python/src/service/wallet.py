@@ -17,7 +17,6 @@ class Wallet:
     """ This class represents the Wallet functionality
     """
     def __init__(self):
-        self.blockchain_enabled: bool = False
         self.wallet: cg_wallet
 
     def set_config(self, config: ConfigType):

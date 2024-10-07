@@ -24,15 +24,6 @@ These directories contain the following:
 * `streamlit_ui` - The source for the UI 
 
 
-## Working without Blockchain
-This project has a `feature flag` in the configuration file which disables the creation of transactions and blockchain access.
-
-It is recommended that the `blockchain_enabled` flag is set to `false` for test purposes.
-
-``` toml
-[commitment_service]
-blockchain_enabled = false
-```
 
 # Python Development
 To lint the source code use the following command line script from the project root directory:
