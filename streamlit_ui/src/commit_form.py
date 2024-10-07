@@ -76,7 +76,6 @@ def commit_form():
 
     # If first button is clicked (Sign UBA Packet)
     if st.session_state['sign_button'] :
-        
 
         st.success('UBA packet signed successfully')
 
@@ -84,10 +83,7 @@ def commit_form():
         nested_dict = list(st.session_state['metadata']['message'].values())[0]
 
         # Save the previous_packet as needed later
-        print("DEBUG: nested_dict = ", nested_dict)
         st.session_state['previous_packet'] = nested_dict['previous_packet']
-        print("DEBUG: previous_packet = ", st.session_state['previous_packet'])
-
 
         # Convert the nested dictionary to a DataFrame
         metadata_df = pd.DataFrame.from_dict(nested_dict, orient='index').reset_index()
@@ -102,8 +98,6 @@ def commit_form():
         # Display the grid
         create_aggrid(metadata_df, selected_grid_options, height=grid_height)
 
-
-
         commit_clicked = st.button('Commit to Blockchain')
 
         if commit_clicked:
@@ -111,12 +105,10 @@ def commit_form():
 
             print("looking up commitment hash using current session cpid: ", st.session_state['cpid'])
             txid = get_commitment_tx_hash(st.session_state['cpid'])
-            print("DEBUG: txid = ", txid)
 
             if txid is None:
                 st.error('Failed to get the transaction hash')
                 return
-            print("DEBUG: txid = ", txid)
 
             # need to get the blockchain_id of the previous packet
             try:
@@ -127,13 +119,11 @@ def commit_form():
             
             prev_network = prev_metadata['commitment_packet']['blockchain_id']
 
-
-
             message = 'See the outpoint on chain: '
             if prev_network == 'BSV':
                 message = f"{message}[{txid}](https://test.whatsonchain.com/tx/{txid})"
             elif prev_network == "ETH":
-                message = f"{message}[{txid}](https://sepolia.etherscan.io/tx/{txid})"
+                message = f"{message}[{txid}](https://sepolia.etherscan.io/tx/0x{txid})"
 
             st.markdown(message, unsafe_allow_html=True)
     

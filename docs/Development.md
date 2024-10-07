@@ -55,8 +55,9 @@ Note that the directories `src` and `data` are mounted on the docker image at ru
 So updates made outside the docker image are reflected immediately inside the image. So you can edit files with your standard IDE.
 
 ## Unit tests in Docker
-To run the unit tests in the Docker container:
+To run the unit tests in the Docker container, build the image, ensure Docker is running, then run the test script:
 ```bash
+$ ./build.sh
 $ ./tests.sh
 ```
 

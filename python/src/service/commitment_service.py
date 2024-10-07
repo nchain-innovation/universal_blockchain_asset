@@ -1,16 +1,15 @@
 import pprint
 import hashlib
 import os
-import ecdsa
 import sys
+import ecdsa
 
-from typing import NewType, Tuple, Any, Dict, List
+from typing import NewType, Tuple, Any, Dict, List, Optional
 pp = pprint.PrettyPrinter()
 from config import ConfigType
 
 from tx_engine import interface_factory
 from tx_engine import Tx, TxIn, TxOut, Script
-from tx_engine.engine.op_codes import OP_0, OP_RETURN
 
 
 from service.commitment_packet import CommitmentPacket, CommitmentPacketMetadata, CommitmentStatus, Cpid, CommitmentType
@@ -46,7 +45,7 @@ class CommitmentService:
     def set_actors(self, config: ConfigType):
         """ Read the actors from the configuration and validate their keys
         """
-        try: 
+        try:
             for actor in config["actor"]:
                 name = actor['name']
                 bitcoin_key = actor.get('bitcoin_key')
@@ -76,10 +75,8 @@ class CommitmentService:
                 token_wallet.set_key(token_key, token_key_curve)
                 self.actors_token_wallets[name] = token_wallet
 
-                eth_wallet = EthereumWallet()
+                eth_wallet = EthereumWallet(self.ethereum_service.web3, eth_key)
                 print(f"Setting up Ethereum wallet for {name}")
-                eth_wallet.set_config(config)
-                eth_wallet.set_account(eth_key)
                 self.actors_eth_wallets[name] = eth_wallet
 
         except KeyError as e:
@@ -91,7 +88,6 @@ class CommitmentService:
         except ValueError as e:
             print(f"Configuration error: {e}")
             sys.exit(1)
-
 
     def set_config(self, config: ConfigType):
         """ Given the configuration, configure this service
@@ -139,8 +135,8 @@ class CommitmentService:
         if result is None:
             return None
         else:
-            # the result error code is not being checked. I'll leave this unhelpful 
-            # comment here for now  
+            # the result error code is not being checked. I'll leave this unhelpful
+            # comment here for now
             return Txid(tx.id())
 
     def get_funds(self, fee_estimate: int, locking_script: str) -> None | Tuple[TxIn, Tx]:
@@ -153,7 +149,7 @@ class CommitmentService:
             return None
         # Get the Oupoint
         outpoints = result['outpoints'][0]
-        vin = TxIn(prev_tx = outpoints['hash'], prev_index=outpoints['index'])
+        vin = TxIn(prev_tx=outpoints['hash'], prev_index=outpoints['index'])
         # Get the Tx
         tx_as_hexstr = result['tx']
         tx = hexstr_to_tx(tx_as_hexstr)
@@ -249,7 +245,7 @@ class CommitmentService:
         return None
 
     def cp_meta_to_status(self, cpid: str, cp: CommitmentPacketMetadata) -> Dict[str, Any]:
-        retval = cp.dict()
+        retval = cp.model_dump()
         del retval["ownership_tx"]
         del retval["spending_tx"]
         if retval["type"] == "Issuance":
@@ -312,32 +308,36 @@ class CommitmentService:
         commitment_packets: List[Tuple[Cpid, CommitmentPacket]] = self.commitment_store.get_commitments_by_actor_without_spending_tx(actor)
         tokens_by_actor = token_store.token_list_by_actor(actor)
         for id, packet in commitment_packets:
-            packet_list = [(obj.cpid, packet) for obj in tokens_by_actor if obj.cpid == id]
+            packet_list = [(Cpid(obj.cpid), packet) for obj in tokens_by_actor if obj.cpid == id]
             if len(packet_list) > 0:
                 return_list.extend(packet_list)
         return return_list
 
-    def get_commitment_tx_hash(self, cpid: str) -> str:
-        """Given a CPID, return the commitment tx hash (spending_tx)
-        """
+    def get_commitment_tx_hash(self, cpid: str) -> Optional[str]:
+        """Given a CPID, return the commitment tx hash (spending_tx)"""
         # given the cpid .. get the previous cpid
-        cp_metadata: CommitmentPacketMetadata = self.commitment_store.get_metadata_by_cpid(cpid)
+        cp_metadata: Optional[CommitmentPacketMetadata] = self.commitment_store.get_metadata_by_cpid(cpid)
         if cp_metadata is None:
             return None
+
+        # Initialize cp_prev_metadata
+        cp_prev_metadata: Optional[CommitmentPacketMetadata] = None
 
         # get the meta-data for the previous packet.
         if cp_metadata.commitment_packet.previous_packet is None:
             # the issuing case
             cp_prev_metadata = cp_metadata
         else:
-            cp_prev_metadata: CommitmentPacketMetadata = self.commitment_store.get_metadata_by_cpid(cp_metadata.commitment_packet.previous_packet)
-        # get the previous commitment metadata
+            cp_prev_metadata = self.commitment_store.get_metadata_by_cpid(cp_metadata.commitment_packet.previous_packet)
+            if cp_prev_metadata is None:
+                return None
 
+        # get the previous commitment metadata
         if cp_prev_metadata.spending_tx is None:
             return None
 
         if cp_prev_metadata.commitment_packet.blockchain_id == "ETH":
-            return cp_prev_metadata.spending_tx[0]
+            return cp_prev_metadata.spending_tx
         elif cp_prev_metadata.commitment_packet.blockchain_id == "BSV":
             return hexstr_to_txid(cp_prev_metadata.spending_tx)
         else:
@@ -354,7 +354,7 @@ class CommitmentService:
         assert isinstance(results, dict)
         assert results['status'] == 'Success'
         first_outpoint = results['outpoints'][0]
-        outpoint = TxIn(prev_tx=first_outpoint['hash'],prev_index=first_outpoint['index'])
+        outpoint = TxIn(prev_tx=first_outpoint['hash'], prev_index=first_outpoint['index'])
         tx = hexstr_to_tx(results['tx'])
         assert isinstance(tx, Tx)
         return (outpoint, tx)
@@ -374,7 +374,7 @@ class CommitmentService:
         tx_out = TxOut(amount=0, script_pubkey=op_return_script)
         spending_tx = Tx(version=1, tx_ins=[outpoint], tx_outs=[tx_out])
         # This transaction only has 1 input, hence the magic 0 for the index to sign
-        signed_spending_tx = wallet.sign_tx_with_input(0,ownership_tx, spending_tx)
+        signed_spending_tx = wallet.sign_tx_with_input(0, ownership_tx, spending_tx)
         if signed_spending_tx is None:
             print("Sign spending tx failed")
             return None
@@ -393,7 +393,6 @@ class CommitmentService:
                 return self.bsv_create_ownership_tx(actors_wallet.get_locking_script_as_hex())
             case 'ETH':
                 eth_actors_wallet = self.actors_eth_wallets[actor]
-
                 print("Calling Ethereum service to create UTXO")
                 tx_hash = self.ethereum_service.create_ownership_tx(eth_actors_wallet)
                 print(f"tx_hash = {tx_hash}")
@@ -405,11 +404,11 @@ class CommitmentService:
         actors_wallet = self.actors_wallets[actor]
         return self.bsv_spend_ownership_tx(actors_wallet, outpoint, ownership_tx, cpid)
 
-    def spend_ownership_tx_eth(self, actor: str, tx_hash: str, cpid: Cpid) -> None | Tx:
+    def spend_ownership_tx_eth(self, actor: str, tx_hash: str, cpid: Cpid) -> None | str:
         actors_wallet = self.actors_eth_wallets[actor]
         assert actors_wallet is not None
         tx_hash = self.ethereum_service.spend_ownership_tx(tx_hash, actors_wallet, cpid)
-        return tx_hash, tx_hash
+        return tx_hash
 
     def sign_commitment_packet(self, actor: str, cp: CommitmentPacket) -> CommitmentPacket:
         assert self.is_known_actor(actor)
@@ -527,7 +526,7 @@ class CommitmentService:
         if cp is None:
             return False
         prev_cp = self.commitment_store.get_commitment_by_cpid(cp.previous_packet)
-        pubkey_to_use: str = None
+        pubkey_to_use: Optional[str] = None
         if prev_cp is None:
             pubkey_to_use = cp.public_key
         else:
@@ -603,7 +602,7 @@ class CommitmentService:
                     asset_id=orignal_cp_meta.commitment_packet.asset_id,
                     data=orignal_cp_meta.commitment_packet.data,
                     previous_packet=orignal_cp_meta.commitment_packet_id,
-                    blockchain_outpoint = vin.as_outpoint(),
+                    blockchain_outpoint=vin.as_outpoint(),
                     blockchain_id=network,
                     signature_scheme=token_wallet.get_signature_scheme(),
                     public_key=token_wallet.get_token_public_key(),
@@ -692,8 +691,7 @@ class CommitmentService:
                 ownership_tx = hexstr_to_tx(previous_cp_meta.ownership_tx)
                 spending_tx = self.spend_ownership_tx(actor, network, outpoint, ownership_tx, transfer_cp_meta.commitment_packet_id)
             elif network == "ETH":
-                #spending_tx = self.spend_ownership_tx_eth(actor, outpoint, previous_cp_meta.commitment_packet_id)
-                spending_tx = self.spend_ownership_tx_eth(actor, outpoint,transfer_cp_meta.commitment_packet_id)
+                spending_tx = self.spend_ownership_tx_eth(actor, outpoint, transfer_cp_meta.commitment_packet_id)
             else:
                 print(f"Unknown network {network}")
                 return None
@@ -704,10 +702,9 @@ class CommitmentService:
             spending_tx = None
 
         # Sign commitment packet
-        # print(f'Sign commitment packet in complete transfer -> {transfer_cp_meta.commitment_packet}')
         transfer_cp_meta.commitment_packet = self.sign_commitment_packet(actor, transfer_cp_meta.commitment_packet)
         self.commitment_store.update_commitment(transfer_cp_meta)
-        # transfer ovwner in the token_store
+        # Transfer token ownership
         if not token_store.assign_to_new_actor(previous_cp_meta.owner, transfer_cp_meta.owner, transfer_cp_meta.commitment_packet.data, transfer_cp_meta.commitment_packet.get_cpid()):
             print(f'Could not transfer token store ownership from {previous_cp_meta.owner} to {transfer_cp_meta.owner} with token_id -> {transfer_cp_meta.commitment_packet.data} and CPID -> {transfer_cp_meta.commitment_packet.get_cpid()}')
         previous_cp_meta.state = CommitmentStatus.Transferred

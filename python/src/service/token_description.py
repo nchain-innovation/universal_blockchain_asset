@@ -39,7 +39,7 @@ class TokenStore:
 
     def save(self) -> bool:
         if len(self.assigned_tokens) > 0:
-            json_data = json.dumps(self.assigned_tokens, default=lambda o: o.dict())
+            json_data = json.dumps(self.assigned_tokens, default=lambda o: o.model_dump())
             with open(self.filepath, 'w') as f:
                 json.dump(json_data, f, indent=4)
         return True
@@ -73,7 +73,7 @@ class TokenStore:
         return True
 
     def __repr__(self) -> str:
-        token_list: str = json.dumps(self.tokens, default=lambda o: o.dict())
+        token_list: str = json.dumps(self.tokens, default=lambda o: o.model_dump())
         return token_list
 
     def assign_to_actor(self, actor: str, token_id: str, cpid: str) -> bool:
@@ -142,7 +142,7 @@ class TokenStore:
     def tokens_by_actor(self, actor: str) -> str:
         if actor not in self.assigned_tokens:
             return f'("error":"actor {actor} does not have any tokens")'
-        json_str: str = json.dumps([obj.dict() for obj in self.assigned_tokens[actor]])
+        json_str: str = json.dumps([obj.model_dump() for obj in self.assigned_tokens[actor]])
         print(type(json_str))
         return json_str
 
