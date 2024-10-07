@@ -75,10 +75,8 @@ class CommitmentService:
                 token_wallet.set_key(token_key, token_key_curve)
                 self.actors_token_wallets[name] = token_wallet
 
-                eth_wallet = EthereumWallet()
+                eth_wallet = EthereumWallet(self.ethereum_service.web3, eth_key)
                 print(f"Setting up Ethereum wallet for {name}")
-                eth_wallet.set_config(config)
-                eth_wallet.set_account(eth_key)
                 self.actors_eth_wallets[name] = eth_wallet
 
         except KeyError as e:
@@ -339,7 +337,7 @@ class CommitmentService:
             return None
 
         if cp_prev_metadata.commitment_packet.blockchain_id == "ETH":
-            return cp_prev_metadata.spending_tx[0]
+            return cp_prev_metadata.spending_tx
         elif cp_prev_metadata.commitment_packet.blockchain_id == "BSV":
             return hexstr_to_txid(cp_prev_metadata.spending_tx)
         else:
@@ -395,7 +393,6 @@ class CommitmentService:
                 return self.bsv_create_ownership_tx(actors_wallet.get_locking_script_as_hex())
             case 'ETH':
                 eth_actors_wallet = self.actors_eth_wallets[actor]
-
                 print("Calling Ethereum service to create UTXO")
                 tx_hash = self.ethereum_service.create_ownership_tx(eth_actors_wallet)
                 print(f"tx_hash = {tx_hash}")
@@ -407,11 +404,11 @@ class CommitmentService:
         actors_wallet = self.actors_wallets[actor]
         return self.bsv_spend_ownership_tx(actors_wallet, outpoint, ownership_tx, cpid)
 
-    def spend_ownership_tx_eth(self, actor: str, tx_hash: str, cpid: Cpid) -> None | Tx:
+    def spend_ownership_tx_eth(self, actor: str, tx_hash: str, cpid: Cpid) -> None | str:
         actors_wallet = self.actors_eth_wallets[actor]
         assert actors_wallet is not None
         tx_hash = self.ethereum_service.spend_ownership_tx(tx_hash, actors_wallet, cpid)
-        return tx_hash, tx_hash
+        return tx_hash
 
     def sign_commitment_packet(self, actor: str, cp: CommitmentPacket) -> CommitmentPacket:
         assert self.is_known_actor(actor)
@@ -705,11 +702,9 @@ class CommitmentService:
             spending_tx = None
 
         # Sign commitment packet
-
-        # print(f'Sign commitment packet in complete transfer -> {transfer_cp_meta.commitment_packet}')
         transfer_cp_meta.commitment_packet = self.sign_commitment_packet(actor, transfer_cp_meta.commitment_packet)
         self.commitment_store.update_commitment(transfer_cp_meta)
-        # transfer ovwner in the token_store
+        # Transfer token ownership
         if not token_store.assign_to_new_actor(previous_cp_meta.owner, transfer_cp_meta.owner, transfer_cp_meta.commitment_packet.data, transfer_cp_meta.commitment_packet.get_cpid()):
             print(f'Could not transfer token store ownership from {previous_cp_meta.owner} to {transfer_cp_meta.owner} with token_id -> {transfer_cp_meta.commitment_packet.data} and CPID -> {transfer_cp_meta.commitment_packet.get_cpid()}')
         previous_cp_meta.state = CommitmentStatus.Transferred

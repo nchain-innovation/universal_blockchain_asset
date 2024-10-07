@@ -1,139 +1,84 @@
-import sys
-sys.path.append("..")
+import logging
+from decimal import Decimal
+from web3 import Web3
+from web3.types import TxParams
+from eth_account.datastructures import SignedTransaction
+from eth_account import Account
+from eth_account.signers.local import LocalAccount
 
 
-from config import ConfigType
-from web3 import Web3, Account
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class EthereumWallet:
     """ This class represents the Ethereum Wallet functionality
     """
-    def __init__(self):
-        self.account: Account
-        self.ethNodeUrl: str
-        self.apiKey: str
-        self.gas: str
-        self.gasPrice: str
-        self.maxGasPrice: str
-        self.web3: Web3
 
-    def set_config(self, config: ConfigType):
-        ethereum_config = config["ethereum_service"]
-        """ Given the wallet configuration, set up the wallet"""
-        self.ethNodeUrl = ethereum_config["ethNodeUrl"]
-        self.apiKey = ethereum_config["apiKey"]
+    def __init__(self, w3: Web3, pkey: str):
+        """ Initialize the EthereumWallet instance """
+        # Check the pkey is not empty
+        if not pkey:
+            logger.error("Error: Ethereum private key is not set.")
+            raise ValueError("Ethereum private key is not set.")
 
-        # Check if the apiKey is set
-        if not self.apiKey:
-            print("Error: Infura API key is not set in the configuration.")
-            sys.exit(1)
+        self.account: LocalAccount = Account.from_key(pkey)
+        self.w3: Web3 = w3
 
-        self.gas = ethereum_config["gas"]
-        self.gasPrice = ethereum_config["gasPrice"]
-        self.maxGasPrice = ethereum_config["maxGasPrice"]
-        self.web3 = Web3(Web3.HTTPProvider(self.ethNodeUrl + self.apiKey))
-        print(f"EthNodeUrl: {self.ethNodeUrl} is connected: {self.web3.is_connected()}")
-
-        # self.gas = min(self.gas, block_gas_limit)
-        # print(f"DEBUG: Gas limit: {self.gas}, Block gas limit: {block_gas_limit}")
-
-    def set_account(self, eth_key: str):
-        self.account = Account.from_key(eth_key)
-
-        # --------------------------------------------------------------------------------------------
-    # Check the balance of the account in Ether
-    def check_balance(self):
-        if self.web3 is None:
-            raise Exception("Not connected. Call connect() first.")
-
-        print(f"Account: {self.account.address}")
-        balance = self.web3.eth.get_balance(self.account.address)
-        balance_in_ether = self.web3.from_wei(balance, 'ether')
-        return balance_in_ether
+        if self.w3.is_connected():
+            logger.info(f"Connected to Ethereum node at {self.w3.provider}")
+        else:
+            raise ConnectionError(f"Failed to connect to Ethereum node at {self.w3.provider}")
 
     # --------------------------------------------------------------------------------------------
-    # Check if the account has sufficient funds for a transaction and its gas fees
-    def check_funds(self, gas_estimate):
-        print("in check_funds")
+    def get_balance(self) -> int:
+        """ Get the balance of the account in Wei """
 
-        # gas_limit = self.gas
-        gas_price = self.web3.to_wei(self.gasPrice, 'gwei')
-        # Check the types of the arguments
-        if not isinstance(gas_estimate, (int, float, str)):
-            raise TypeError("Unsupported type for 'gas_estimate'. Must be one of integer, float, or string")
-        # if not isinstance(gas_limit, int):
-        #     raise TypeError("Unsupported type for 'gas_limit'. Must be an integer")
-        if not isinstance(gas_price, int):
-            raise TypeError("Unsupported type for 'gas_price'. Must be an integer")
+        # Check w3 is connected
+        if not self.w3.is_connected():
+            raise ConnectionError("Web3 provider is not connected")
 
-        print("after type check")
+        balance = self.w3.eth.get_balance(self.account.address)
+        return balance
 
-        # Convert the amount to Wei (the smallest unit of Ether)
-        # amount_wei = self.web3.to_wei(gas_estimate, 'ether')
+    # --------------------------------------------------------------------------------------------
+    def get_balance_eth(self) -> int | Decimal:
+        """ Get the balance of the account in ETH """
 
-        # Calculate the total cost of the transaction
-        total_cost = gas_estimate * gas_price
+        balance_wei = self.get_balance()
+        balance_eth = Web3.from_wei(balance_wei, 'ether')
+        return balance_eth
 
-        # Get the account balance
-        balance = self.web3.eth.get_balance(self.account.address)
+    # --------------------------------------------------------------------------------------------
+    def sign_transaction(self, transaction: TxParams) -> SignedTransaction:
+        """Sign a transaction using the account's private key."""
 
-        print(f"Account balance: {balance}")
-        print(f"Estimated cost: {total_cost}")
-        # Check if the balance is greater than or equal to the total cost
-        return balance >= total_cost
+        if not self.w3.is_connected():
+            raise ConnectionError("Web3 provider is not connected")
 
-    def is_connected(self):
-        return self.web3.is_connected()
+        signed_txn = self.w3.eth.account.sign_transaction(transaction, private_key=self.account._private_key)
 
+        return signed_txn
+
+    # --------------------------------------------------------------------------------------------
+    def is_connected(self) -> bool:
+        """ Check if the web3 provider is connected """
+        if self.w3 is None:
+            return False
+        return self.w3.is_connected()
+
+    # --------------------------------------------------------------------------------------------
     def __repr__(self) -> str:
-        return ''.join(f'eth account -> {self.account.address}')
+        """ Return a string representation of the EthereumWallet instance """
+        if self.account is None:
+            return 'eth account -> None'
+        return f'eth account -> {self.account.address}'
 
-    def get_block_gas_limit(self):
-        current_block = self.web3.eth.block_number
-        block_gas_limit = self.web3.eth.get_block(current_block)['gasLimit']
-        # print(f"DEBUG: Current block gas limit: {block_gas_limit}")
+    # --------------------------------------------------------------------------------------------
+    def get_block_gas_limit(self) -> int:
+        if self.w3 is None:
+            raise ValueError("Web3 provider is not set")
+        current_block = self.w3.eth.block_number
+        block_gas_limit = self.w3.eth.get_block(current_block)['gasLimit']
         return block_gas_limit
-
-    def update_gas_price(self, num_transactions=10):
-        # Get the latest block number
-        latest_block = self.web3.eth.block_number
-
-        # Collect gas prices from the last `num_transactions` transactions
-        gas_prices = []
-        for i in range(num_transactions):
-            block = self.web3.eth.get_block(latest_block - i)
-            if not block['transactions']:
-                print(f"Block {latest_block - i} has no transactions. Skipping...")
-                continue
-            tx_hash = block['transactions'][0]
-            tx_receipt = self.web3.eth.get_transaction_receipt(tx_hash)
-            if tx_receipt['effectiveGasPrice'] is None:
-                print(f"Transaction {tx_hash} is pending. Skipping...")
-                continue  # Skip this iteration if effectiveGasPrice is None
-            last_gas_price = int(self.web3.from_wei(tx_receipt['effectiveGasPrice'], 'gwei'))
-            print(f"Transaction {tx_hash.hex()} has gas price: {last_gas_price}")
-            gas_prices.append(last_gas_price)
-
-        # Calculate the average gas price
-        if gas_prices:
-            print(f"initial gas price: {self.gasPrice}")
-
-            print(f"Gas prices: {gas_prices}")
-            print(f"Sum of gas prices: {sum(gas_prices)}")
-            print(f"Number of transactions: {len(gas_prices)}")
-            average_gas_price = int(sum(gas_prices) / len(gas_prices))
-            print(f"Average gas price: {average_gas_price}")
-
-            if average_gas_price < int(self.maxGasPrice):
-                print(f"Updating gas price from {self.gasPrice} to {average_gas_price}")
-                self.gasPrice = str(average_gas_price)
-                return True
-            else:
-                print(f"Average gas price exceeds the maximum allowed value of {self.maxGasPrice}.")
-                print("Gas price remains unchanged.")
-                raise Exception(f"Average gas price of {average_gas_price} exceeds the maximum allowed value of {self.maxGasPrice}.")
-
-        else:
-            print("No transactions found, gas price remains unchanged.")
-            return False  # Return None if no transactions were found or processed

@@ -89,7 +89,6 @@ def issuement_form():
                 cpid_data = list(result['message'].values())[0]
                 txid = cpid_data['blockchain_outpoint']
                 st.session_state['cpid'] = list(result['message'])[0]
-                # print('DEBUG: cpid = ', st.session_state['cpid'])
                 message = 'See the outpoint on chain: '
                 if network == 'BSV':
                     txid = txid[:-2]
