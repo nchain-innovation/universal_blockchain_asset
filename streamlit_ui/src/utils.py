@@ -13,5 +13,5 @@ def see_the_tx_onchain(message, network, txid):
         txid = txid[:-2]
         st.markdown(f"{message}[{txid}](https://test.whatsonchain.com/tx/{txid})", unsafe_allow_html=True)
     elif network == "ETH":
-        st.markdown(f"{message}[{txid}](https://sepolia.etherscan.io/tx/{txid})", unsafe_allow_html=True)
+        st.markdown(f"{message}[{txid}](https://sepolia.etherscan.io/tx/0x{txid})", unsafe_allow_html=True)
 
