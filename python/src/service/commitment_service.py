@@ -71,7 +71,6 @@ class CommitmentService:
                 self.actors_token_wallets[name] = token_wallet
 
                 eth_wallet = EthereumWallet(self.ethereum_service.web3, eth_key)
-                print(f"Setting up Ethereum wallet for {name}")
                 self.actors_eth_wallets[name] = eth_wallet
 
         except KeyError as e:
@@ -92,12 +91,11 @@ class CommitmentService:
         self.finance_service.set_config(config)
 
         # BSV
-        self.blockchain_network = config["blockchain"]["network"]
+        self.blockchain_network = config["blockchain"]["network_type"]
         self.blockchain_interface = interface_factory.set_config(config["blockchain"])
 
         # Ethereum
         self.ethereum_service.set_config(config)
-
         self.set_actors(config)
         self.networks = config["commitment_service"]["networks"]
         self.commitment_store.set_config(config)
