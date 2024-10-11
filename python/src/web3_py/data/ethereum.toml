@@ -1,0 +1,18 @@
+[ethereum]
+privateKey = "" # the private key of the ETH account that will be used to send transactions (required)
+
+port = 8575             # the port for the Fast API server
+
+[ethereum_service]
+ethNodeUrl = "https://sepolia.infura.io/v3/"
+apiKey = ""             # Insert your Infura API key here
+interface_type = "SmartContract"
+
+[[interface]]
+name = "SmartContract"
+deploy_new_contract = false # Set to true to deply a new contract
+contract_pkey = ""          # Required if deploy_new_contract is set to true
+contract_deployment = "0xf120D32bb10A2aE2971f9Aa026aBE8F0dA9709fb" # Required if deploy_new_contract is set to false
+abi_filename = "./build/SmartUTXO.abi"
+bytecode_filename = "./build/SmartUTXO.bytecode"
+gas_strategy = "fast"   # the gas strategy to use when sending transactions. Possible values are "fast", "medium", "slow"
