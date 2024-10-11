@@ -28,7 +28,7 @@ services:
   # UBA Service
   uba_service:
     container_name: uba_service
-    image: nchain/rnd-prototyping-uba_service:v1.0
+    image: nchain/rnd-prototyping-uba_service:v1.1
     ports:
       - 8040:8040
     networks:

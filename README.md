@@ -23,7 +23,7 @@ docker compose up
 
 For more information about getting the project started see [here](docs/Getting_started.md).
 
-# Resetting the data
+# Reset the data
 
 To restart cleanly, please delete the following files in the `data` directory:
 - commitments.json
