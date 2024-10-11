@@ -1,5 +1,2 @@
-# This is a comment.
-# Each line is a file pattern followed by one or more owners.
-
 # Require approval from the rnd-prototyping team for any changes to the master branch
 * @nchain-innovation/rnd-prototyping
