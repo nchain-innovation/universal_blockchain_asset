@@ -4,8 +4,8 @@ Goto [Remix](https://remix.ethereum.org/)
 
 - From FileExplorer (side menu):
   - click on Contracts
-  - either upload file or copy-paste into a new file, called WilderToken.sol
+  - either upload file or copy-paste into a new file, called SmartUTXO.sol
 - From Solidity Compiler (side menu):
-  - Click on Compile WilderToken.sol
+  - Click on Compile SmartUTXO.sol
 
 The ABI and Bytecode are copyable at the bottom of the Solidity Compiler section

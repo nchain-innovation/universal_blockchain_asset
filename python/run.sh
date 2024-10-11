@@ -8,5 +8,6 @@ docker run -it \
     -p 8040:8040 \
     --mount type=bind,source=$SRC_DIR,target=/app/python \
     --mount type=bind,source=$DATA_DIR,target=/app/data \
-    --rm commitment_service \
+    --network uba_network \
+    --rm uba_service \
     $1 $2

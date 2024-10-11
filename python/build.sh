@@ -1,3 +1,3 @@
 #!/bin/bash
 
-docker build --tag "uba_service" --file Dockerfile .
+docker build --no-cache --tag "uba_service" --file Dockerfile .

@@ -1,15 +1,39 @@
-## Dependencies
+## Test REST API for Ethereum Interface
 
-Using an API to connect to the Ethereum network - am using infura
+A test API is provided to exercise and troubleshot the Ethereum interface. 
 
-And using test netwrok Seplia Testnet (free to use to test Ethereum)
+### Requirements: 
 
-## Run the Tests
+An API key is required to connect to the Ethereum network - create one here:
+[https://docs.infura.io/api/getting-started](https://docs.infura.io/api/getting-started)
 
-From **python/src** run:
+ 
+An Ethereum account with funds is required.  
 
-`python3 -m unittest discover -s tests`
+Create an Ethereum Key using either a library such as the Web3.py python library, or via a wallet like Metamask.
 
-Mnemonic to private key stuff from here:
 
-https://github.com/vergl4s/ethereum-mnemonic-utils/blob/master/README.md
+Funds can be added by using a faucet, for example, the Google ETH Sepolia faucet at [https://cloud.google.com/application/web3/faucet/ethereum/sepolia](https://cloud.google.com/application/web3/faucet/ethereum/sepolia)
+
+### Configuration
+
+Edit the **web3_py/data/ethereum.toml** file to add your API key and ETH privateKey
+
+```
+[ethereum]
+privateKey = "" # the private key of the ETH account that will be used to send transactions (required)
+
+[ethereum_service]
+ethNodeUrl = "https://sepolia.infura.io/v3/"
+apiKey = ""             # Insert your Infura API key here
+```
+
+## Run the API
+
+From **python/src/Web3_py** run:
+
+`python3 main.py`
+
+The Rest API is available at: http://localhost:8575/docs#/
+
+
