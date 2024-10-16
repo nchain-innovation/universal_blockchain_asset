@@ -45,6 +45,22 @@ def get_commitment_metadata_by_cpid(cpid: str) -> Response:
         return JSONResponse(content={"message": serialisable_commitment}, status_code=status.HTTP_200_OK)
 
 
+@app.get("/commitment/history", tags=["Tokens"])
+def get_commitment_history_by_cpid(cpid: str) -> Response:
+    """ Get Commitment History associated with this CPID
+    """
+    if not commitment_service.is_known_cpid(cpid):
+        return JSONResponse(content={"message": "Unable to find the Commitment Packet"}, status_code=status.HTTP_400_BAD_REQUEST)
+    else:
+        history = commitment_service.get_commitment_history_by_cpid(cpid)
+
+        if history == []:
+            return JSONResponse(content={"message": "Unable to find any Commitment Packets"}, status_code=status.HTTP_400_BAD_REQUEST)
+        else:
+            serialisable_history = [{c[0]: c[1].dict()} for c in history]
+            return JSONResponse(content={"message": serialisable_history}, status_code=status.HTTP_200_OK)
+
+
 @app.get("/commitment/tx", tags=["Tokens"])
 def get_commitment_transaction(cpid: str) -> Response:
     """ Given the cpid return the transaction ownership_tx in the Commitment

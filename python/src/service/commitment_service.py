@@ -187,6 +187,12 @@ class CommitmentService:
         """
         return self.commitment_store.get_metadata_by_cpid(cpid)
 
+    def get_commitment_history_by_cpid(self, cpid: str) -> List[Tuple[Cpid, CommitmentPacket]]:
+        """ Given CPID return the associated CPID and the history of the packet
+        """
+        assert self.is_known_cpid(cpid)
+        return self.commitment_store.get_commitment_history(cpid)
+
     def get_commitments_by_actor(self, actor: str) -> List[Tuple[Cpid, CommitmentPacket]]:
         """ Return all Commitments made by this actor
         """

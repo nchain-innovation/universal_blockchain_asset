@@ -66,6 +66,19 @@ class CommitmentStore:
             return cp_meta.commitment_packet
         return None
 
+    def get_commitment_history(self, cpid: str) -> List[Tuple[Cpid, CommitmentPacket]]:
+        history = []
+        current_cpid = cpid
+
+        while current_cpid is not None:
+            cp_meta = self.get_metadata_by_cpid(current_cpid)
+            if cp_meta is None:
+                break
+            history.append((current_cpid, cp_meta.commitment_packet))
+            current_cpid = cp_meta.commitment_packet.previous_packet
+
+        return history
+
     def get_commitments_by_actor(self, actor: str) -> List[Tuple[Cpid, CommitmentPacket]]:
         return [(c.commitment_packet_id, c.commitment_packet) for c in self.commitments if c.owner == actor]
 
