@@ -1,13 +1,17 @@
 import os
 
-from fastapi import FastAPI, Response, status
+from fastapi import FastAPI, Response, status, HTTPException, Form, UploadFile, File
 from fastapi.responses import JSONResponse
+from starlette.responses import FileResponse
 
 from typing import Any, Dict, Optional
 from pydantic import BaseModel
 
 from service.commitment_service import commitment_service
 from service.token_description import token_store
+from service.file_storage import FileStorage
+
+
 
 CONFIG_FILE = "../data/uba-server.toml" if os.environ.get("APP_ENV") == "docker" else "../../data/uba-server.toml"
 
@@ -25,6 +29,9 @@ app = FastAPI(
     description="UBA Token System REST API",
     openapi_tags=tags_metadata,
 )
+
+# Initialise FileStorage class with allowed extensions
+file_storage = FileStorage(allowed_extensions={"png", "jpg", "jpeg"})
 
 
 @app.get("/status", tags=["Status"])
@@ -196,6 +203,50 @@ class IssuanceParameters(BaseModel):
     asset_id: str
     asset_data: str
     network: str
+
+
+@app.post("/asset/create", status_code=201, tags=["Assets"])
+async def asset_create(
+    username: str = Form(...),  # Get username from form
+    file: UploadFile = File(...)  # Get the file upload
+) -> Dict[str, str]:
+    """Upload an image, validate, and save it using the FileStorage class."""
+
+    try:
+        # Read the file content asynchonously
+        file_content = await file.read()
+
+        # Delegate the file saving and validation to FileStorage
+        asset_id = file_storage.save_file(file_content, file.filename, username)
+
+        response = {
+            "username": username,
+            "asset_id": asset_id,
+            "status": "File uploaded and saved successfully"
+        }
+
+        return response
+    except ValueError as e:
+        # If the file type is not allowed, return a 400 error
+        raise HTTPException(status_code=400, detail=str(e))
+
+    except Exception as e:
+        # Handle other server-side errors
+        raise HTTPException(status_code=500, detail="Error saving file") from e
+
+
+
+@app.get("/asset/retrieve/{asset_id}/{username}", tags=["Assets"])
+def asset_retrieve(asset_id: str, username: str) -> FileResponse:
+    """Retrieve file data by UUID and username."""
+    try:
+        file_data = file_storage.get_file_data(unique_reference=asset_id, username=username)
+        file_path = file_data["file_path"]
+        filename = file_data["filename"]
+        return FileResponse(file_path, filename=filename)
+    except ValueError as e:
+        print(f"Error retrieving file: {str(e)}")
+        raise HTTPException(status_code=404, detail=str(e))
 
 
 @app.post("/commitments/issuance", tags=["Tokens"])
