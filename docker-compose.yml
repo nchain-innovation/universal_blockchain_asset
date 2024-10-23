@@ -45,7 +45,9 @@ services:
   uba_service:
     container_name: uba_service
     # image: nchain/rnd-prototyping-uba_service:v1.1
-    image: uba_service
+    build: 
+      context: ./python
+      dockerfile: ./Dockerfile
     ports:
       - 8040:8040
     networks:
