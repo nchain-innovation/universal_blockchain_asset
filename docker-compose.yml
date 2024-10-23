@@ -6,6 +6,22 @@ networks:
 
 services:
 
+  # Asset Test UI
+  asset_test_ui:
+    container_name: asset_test_ui
+    build: asset_test_ui
+    ports: 
+      - 8550:8550
+    networks:
+      - uba_network
+    volumes:
+      - ./data:/app/data
+      - ./asset_test_ui/src:/app
+    command: ["streamlit", "run", "app.py", "--server.port", "8550"]
+    depends_on:
+      uba_service:
+        condition: service_healthy
+
 
   # Financing Service
   financing_service:
