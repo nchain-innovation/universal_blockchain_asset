@@ -1,0 +1,89 @@
+@startuml Create Digital Asset - Process Overview
+title Create Digital Asset - Process Overview
+
+actor Alice
+
+
+box "UBA Server" #LightPink
+participant Rest_API as API
+end box
+
+participant Token_Store as TS
+participant File_Store as FS
+participant Commitment_Service as CS
+
+box "BSV | ETH" #lightCyan
+participant "Blockchain"
+end box
+
+
+activate Alice
+Alice -> API: Asset Create\n(actor, image, name, description, network) 
+activate API
+API -> TS: Asset Create\n(actor, image, name, description) 
+activate TS
+
+TS -> FS: Add Token\n(token_descriptor)
+note left of FS : Image data is\nstored on disk
+activate FS
+FS --> TS: success
+deactivate FS
+TS --> API: asset_id, asset_hash
+deactivate TS
+
+
+
+
+API -> CS: Commitment Issue\n(actor, asset_id, asset_hash, network)
+activate CS
+CS -> TS: Check Token ID
+activate TS
+TS --> CS: success
+deactivate TS
+
+CS -> Blockchain: Create Ownership Tx
+activate Blockchain
+Blockchain --> CS: TxID
+deactivate Blockchain
+
+note right of CS : Create UBA Packet\nand sign it using\nToken Wallet
+CS -> TS: Assign ID to Actor\n(actor, asset_id, CPID)
+activate TS
+TS --> CS: success
+deactivate TS
+note right of CS : CPID metadata\nsaved in\nCommitment Store
+CS --> API: CPID and Metadata
+deactivate CS
+API --> Alice: CPID and Metadata
+deactivate API
+
+...
+
+
+Alice -> API: Asset Retrieve\n(asset_id, actor) 
+activate API
+API -> TS: Asset Retrieve\n(asset_id, actor) 
+activate TS
+TS -> FS: Get File\n(asset_id)
+activate FS
+FS --> TS: File, filename
+deactivate FS
+TS --> API: File, filename
+note right of API: Stream image \nfrom disk
+deactivate TS
+API --> Alice: File, filename
+deactivate API
+deactivate Alice
+
+
+
+note bottom
+    *"Actor" and "Username" 
+    are used interchangeably 
+    in code and documentation
+
+    *"UBA" and "CPID" also 
+    refer to the same concept
+end note
+
+@enduml

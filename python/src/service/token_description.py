@@ -4,12 +4,16 @@ from config import ConfigType
 import json
 import os
 
+from service.file_storage import FileStorage
+
 from service.util import is_unit_test
 
 
 class token_descriptor(BaseModel):
     ipfs_cid: str
+    name: str
     description: str
+    file_hash: str
     cpid: None | str
 
     @validator('cpid', pre=True)
@@ -31,10 +35,18 @@ class TokenStore:
         self.assigned_tokens: Dict = {}
         self.filepath: str = ""
 
+        # Initialise FileStorage with the allowed exensions
+        self.file_storage = FileStorage(allowed_extensions={"png", "jpg", "jpeg"})
+
     def set_config(self, config: ConfigType):
         self.filepath = config["token_info"]["token_file_store"]
         for token in config["token"]:
-            token_desc: token_descriptor = token_descriptor(ipfs_cid=token["ipfs_cid"], description=token["description"], cpid="")
+            token_desc: token_descriptor = token_descriptor(
+                ipfs_cid=token["ipfs_cid"],
+                name=token["description"],
+                description=token["description"] + " data",
+                file_hash="file_hash",
+                cpid="")
             self.tokens[token["ipfs_cid"]] = token_desc
 
     def save(self) -> bool:
@@ -54,7 +66,12 @@ class TokenStore:
                     for key, value in loaded_data.items():
                         tokens_per_actor: List[token_descriptor] = []
                         for items in value:
-                            tokens_per_actor.append(token_descriptor(ipfs_cid=items["ipfs_cid"], description=items["description"], cpid=items["cpid"]))
+                            tokens_per_actor.append(token_descriptor(
+                                ipfs_cid=items["ipfs_cid"],
+                                name=items["name"],
+                                description=items["description"],
+                                file_hash=items["file_hash"],
+                                cpid=items["cpid"]))
                             if items["ipfs_cid"] in self.tokens:
                                 self.tokens.pop(items["ipfs_cid"])
                         self.assigned_tokens[key] = tokens_per_actor
@@ -71,6 +88,44 @@ class TokenStore:
                 del self.tokens[key]
 
         return True
+
+    # ----------------------------------------------------------------
+    def add_token(self, file_content: bytes, filename: str, actor: str, name: str, description: str) -> dict:
+        """Add a new token to the token store.
+        """
+        ret = self.file_storage.save_file(file_content, filename, actor)
+
+        # Check if there was an error saving the file
+        if "error" in ret:
+            print(f"Error saving file: {ret['error']}")
+            return ret
+
+        # else add to the token list
+        else:
+            asset_id = ret["asset_id"]
+            file_hash = ret["file_hash"]
+            token = token_descriptor(
+                ipfs_cid=asset_id,
+                name=name,
+                description=description,
+                file_hash=file_hash,
+                cpid=None)
+            self.tokens[asset_id] = token
+            return ret
+
+    # ----------------------------------------------------------------
+    def get_token_filepath(self, asset_id: str, actor: str) -> dict:
+        """Retrieve the file path and original filename for a given asset ID and actor.
+
+        Args:
+            asset_id (str): The unique identifier for the asset.
+            actor (str): The username of the actor.
+        Returns:
+            dict: A dictionary containing the file path and original filename.
+        Raises:
+            ValueError: If the file is not found, or Username does not Match
+        """
+        return self.file_storage.get_file_data(asset_id, actor)
 
     def __repr__(self) -> str:
         token_list: str = json.dumps(self.tokens, default=lambda o: o.model_dump())
@@ -105,7 +160,10 @@ class TokenStore:
             print(f'token with id = {token_id} is already in the available list')
             return False
 
-        token_to_move: token_descriptor = [obj for obj in self.assigned_tokens[prev_actor] if obj.ipfs_cid == token_id].pop()
+        matching_tokens = [obj for obj in self.assigned_tokens[prev_actor] if obj.ipfs_cid == token_id]
+        if not matching_tokens:
+            raise ValueError(f"No token found with ipfs_cid {token_id} for actor {prev_actor}")
+        token_to_move: token_descriptor = matching_tokens.pop()
         # remove from the list
         self.assigned_tokens[prev_actor].remove(token_to_move)
         token_to_move.cpid = cpid
@@ -122,7 +180,7 @@ class TokenStore:
 
     def return_to_pool(self, actor: str, token_id: str) -> bool:
         if actor not in self.assigned_tokens:
-            print(f'{actor} does not have assinged tokens')
+            print(f'{actor} does not have assigned tokens')
             return False
 
         if token_id in self.tokens:
@@ -143,7 +201,6 @@ class TokenStore:
         if actor not in self.assigned_tokens:
             return f'("error":"actor {actor} does not have any tokens")'
         json_str: str = json.dumps([obj.model_dump() for obj in self.assigned_tokens[actor]])
-        print(type(json_str))
         return json_str
 
     def token_list_by_actor(self, actor: str) -> List[token_descriptor]:
@@ -162,7 +219,11 @@ class TokenStore:
             print(f'Actor {actor} does not own token_id {token_id}')
             return False
 
-        token_to_check: token_descriptor = [obj for obj in self.assigned_tokens[actor] if obj.ipfs_cid == token_id].pop()
+        matching_tokens = [obj for obj in self.assigned_tokens[actor] if obj.ipfs_cid == token_id]
+        if not matching_tokens:
+            raise ValueError(f"No token found with ipfs_cid {token_id} for actor {actor}")
+        token_to_check: token_descriptor = matching_tokens.pop()
+
         if token_to_check is None:
             print(f'Actor {actor} does not own token_id {token_id}')
             return False

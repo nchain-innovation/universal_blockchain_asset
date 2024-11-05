@@ -14,6 +14,7 @@ def draw_commitment_grid(df):
         'rowSelection': 'single',
         'columnDefs' : [
             { 'headerName': 'IPFS CID', 'field': 'ipfs_cid', "checkboxSelection": True },
+            { 'headerName': 'Asset Name', 'field': 'name' },
             { 'headerName': 'Description', 'field': 'description' },
             { 'headerName': 'CPID', 'field': 'cpid' }
         ],
@@ -81,8 +82,9 @@ def issuement_form():
 
             # NB: This does the issuance in one step
             result = create_issuance(st.session_state['username'], 
-                                selected_row['description'], 
-                                selected_row['ipfs_cid'],
+                                selected_row['ipfs_cid'], 
+                                selected_row['name'],
+                                selected_row['description'],
                                 network)
             if result:
                 # Get the first (and only) item in the second level dictionary

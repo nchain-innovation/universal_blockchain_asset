@@ -397,14 +397,19 @@ class CommitmentService:
         cp.signature = cp_digest_sig.hex()
         return cp
 
-    def create_issuance_commitment(self, actor: str, asset_id: str, asset_data: str, network: str) -> None | Tuple[Cpid, CommitmentPacket]:
+    def create_issuance_commitment(self,
+                                   actor: str,
+                                   asset_id: str,
+                                   asset_name: str,
+                                   asset_data: str,
+                                   network: str) -> None | Tuple[Cpid, CommitmentPacket]:
         """ Create Issuance Commitment Packet
         """
         assert self.is_known_actor(actor)
         assert self.is_known_network(network)
         # check the token_id (denoted by asset_data right now) is in the token_store
 
-        assert (token_store.check_token_id(asset_data))
+        assert (token_store.check_token_id(asset_id))
 
         # Create utxo
         result = self.create_ownership_tx(actor, network)
@@ -418,6 +423,7 @@ class CommitmentService:
                 # Create commitment packet
                 cp = CommitmentPacket(
                     asset_id=asset_id,
+                    asset_name=asset_name,
                     data=asset_data,
                     previous_packet=None,
                     blockchain_outpoint=vin.as_outpoint(),
@@ -431,6 +437,7 @@ class CommitmentService:
                 # Create commitment packet
                 cp = CommitmentPacket(
                     asset_id=asset_id,
+                    asset_name=asset_name,
                     data=asset_data,
                     previous_packet=None,
                     blockchain_outpoint=vin,
@@ -450,8 +457,8 @@ class CommitmentService:
         # Store commitment packet
         cpid = cp.get_cpid()
         # assign token to actor
-        if not token_store.assign_to_actor(actor, asset_data, cpid):
-            print(f'Problem with assert ID -> {asset_data} in the token store')
+        if not token_store.assign_to_actor(actor, asset_id, cpid):
+            print(f'Problem with assert ID -> {asset_id} in the token store')
 
         match network:
             case 'BSV':
@@ -529,8 +536,8 @@ class CommitmentService:
         assert self.can_transfer(cpid, actor, is_owner=False)
 
         # check the owner of the original cp also has ownership in the token store
-        if not token_store.check_token_id_actor(orignal_cp_meta.owner, orignal_cp_meta.commitment_packet.data):
-            print('Issue with orignal ownersip {orignal_cp_meta.owner} on token_id {orignal_cp_meta.commitment_packet.data}')
+        if not token_store.check_token_id_actor(orignal_cp_meta.owner, orignal_cp_meta.commitment_packet.asset_id):
+            print('Issue with orignal ownership {orignal_cp_meta.owner} on token_id {orignal_cp_meta.commitment_packet.asset_id}')
         # Create transfer template
         # Create utxo
         result = self.create_ownership_tx(actor, network)
@@ -547,6 +554,7 @@ class CommitmentService:
             case 'BSV':
                 cp = CommitmentPacket(
                     asset_id=orignal_cp_meta.commitment_packet.asset_id,
+                    asset_name=orignal_cp_meta.commitment_packet.asset_name,
                     data=orignal_cp_meta.commitment_packet.data,
                     previous_packet=orignal_cp_meta.commitment_packet_id,
                     blockchain_outpoint=vin.as_outpoint(),
@@ -558,6 +566,7 @@ class CommitmentService:
             case 'ETH':
                 cp = CommitmentPacket(
                     asset_id=orignal_cp_meta.commitment_packet.asset_id,
+                    asset_name=orignal_cp_meta.commitment_packet.asset_name,
                     data=orignal_cp_meta.commitment_packet.data,
                     previous_packet=orignal_cp_meta.commitment_packet_id,
                     blockchain_outpoint=vin,
@@ -649,7 +658,7 @@ class CommitmentService:
         transfer_cp_meta.commitment_packet = self.sign_commitment_packet(actor, transfer_cp_meta.commitment_packet)
         self.commitment_store.update_commitment(transfer_cp_meta)
         # Transfer token ownership
-        if not token_store.assign_to_new_actor(previous_cp_meta.owner, transfer_cp_meta.owner, transfer_cp_meta.commitment_packet.data, transfer_cp_meta.commitment_packet.get_cpid()):
+        if not token_store.assign_to_new_actor(previous_cp_meta.owner, transfer_cp_meta.owner, transfer_cp_meta.commitment_packet.asset_id, transfer_cp_meta.commitment_packet.get_cpid()):
             print(f'Could not transfer token store ownership from {previous_cp_meta.owner} to {transfer_cp_meta.owner} with token_id -> {transfer_cp_meta.commitment_packet.data} and CPID -> {transfer_cp_meta.commitment_packet.get_cpid()}')
         previous_cp_meta.state = CommitmentStatus.Transferred
         if previous_cp_meta.commitment_packet.blockchain_id == "BSV":

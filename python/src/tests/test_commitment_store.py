@@ -59,6 +59,7 @@ class CommitmentStoreTests(unittest.TestCase):
         actor = "Alice"
         network = "BSV"
         asset_id = "person"
+        asset_name = "name"
         asset_data = "Murphy"
 
         vin = TxIn(prev_tx="00000000000000000000000000000000", prev_index=0)
@@ -67,6 +68,7 @@ class CommitmentStoreTests(unittest.TestCase):
         # Create commitment packet
         cp = CommitmentPacket(
             asset_id=asset_id,
+            asset_name=asset_name,
             data=asset_data,
             previous_packet=None,
             blockchain_outpoint=str(vin),
@@ -91,7 +93,7 @@ class CommitmentStoreTests(unittest.TestCase):
         self.cs.save()
 
         # Mock the file read to return the saved data
-        mock_open().read.return_value = '[{"owner": "Alice", "type": "Issuance", "state": "Created", "ownership_tx": "01000000000000000000", "spending_tx": "", "commitment_packet_id": "test_cpid", "commitment_packet": {"asset_id": "person", "data": "Murphy", "previous_packet": null, "signature": "", "signature_scheme": "", "public_key": "", "blockchain_outpoint": "PyTxIn { prev_tx: \\"00000000000000000000000000000000\\", prev_index: 0, sequence: 4294967295, script_sig: \\"\\" }", "blockchain_id": "BSV"}}]'
+        mock_open().read.return_value = '[{"owner": "Alice", "type": "Issuance", "state": "Created", "ownership_tx": "01000000000000000000", "spending_tx": "", "commitment_packet_id": "test_cpid", "commitment_packet": {"asset_id": "person", "asset_name": "name", "data": "Murphy", "previous_packet": null, "signature": "", "signature_scheme": "", "public_key": "", "blockchain_outpoint": "PyTxIn { prev_tx: \\"00000000000000000000000000000000\\", prev_index: 0, sequence: 4294967295, script_sig: \\"\\" }", "blockchain_id": "BSV"}}]'
         self.cs.reset()
         self.assertEqual(self.cs.commitments, [])
 
@@ -106,6 +108,7 @@ class CommitmentStoreTests(unittest.TestCase):
             commitment_packet_id=Cpid('test_cpid'),
             commitment_packet=CommitmentPacket(
                 asset_id='person',
+                asset_name='name',
                 data='Murphy',
                 previous_packet=None,
                 signature="",

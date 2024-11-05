@@ -58,7 +58,7 @@ CONFIG = {
         'token_file_store': TOKEN_FILE_STORE
     },
     'token': [
-        {'ipfs_cid': 'asset_data', 'description': 'asset description'
+        {'ipfs_cid': 'asset_id', 'description': 'asset_name'
          }],
     'finance_service': {
         'url': 'http://financing_service:8070',
@@ -191,7 +191,12 @@ class TestCommitmentService(unittest.TestCase):
 
         # The expected token structure
         expected_tokens = {
-            'asset_data': token_descriptor(ipfs_cid='asset_data', description='asset description', cpid='')
+            'asset_id': token_descriptor(
+                ipfs_cid='asset_id',
+                name='asset_name',
+                description='asset_name data',
+                file_hash='file_hash',
+                cpid='')
         }
 
         # Check if the tokens in token_store match the expected tokens
@@ -247,7 +252,7 @@ class TestCommitmentService(unittest.TestCase):
         """
         self.service.finance_service = self.mock_financing_service
 
-        result = self.service.create_issuance_commitment("Alice", "asset_id", "asset_data", "BSV")
+        result = self.service.create_issuance_commitment("Alice", "asset_id", "asset_name", "asset_data", "BSV")
 
         self.assertIsNotNone(result)
         assert result is not None
@@ -286,7 +291,7 @@ class TestCommitmentService(unittest.TestCase):
 
         self.service.finance_service = self.mock_financing_service
 
-        result = self.service.create_issuance_commitment("Alice", "asset_id", "asset_data", "BSV")
+        result = self.service.create_issuance_commitment("Alice", "asset_id", "asset_name", "asset_data", "BSV")
         self.assertIsNotNone(result)
         assert result is not None
         (cpid, cp) = result
@@ -355,7 +360,7 @@ class TestCommitmentService(unittest.TestCase):
         self.service.finance_service = self.mock_financing_service
 
         # Create issuance commitment
-        result = self.service.create_issuance_commitment("Alice", "asset_id", "asset_data", "BSV")
+        result = self.service.create_issuance_commitment("Alice", "asset_id", "asset_name", "asset_data", "BSV")
         self.assertIsNotNone(result)
         assert result is not None
         (cpid, cp) = result
@@ -449,7 +454,7 @@ class TestCommitmentService(unittest.TestCase):
         self.service.finance_service = self.mock_financing_service
 
         # Create issuance commitment
-        result = self.service.create_issuance_commitment("Alice", "asset_id", "asset_data", "BSV")
+        result = self.service.create_issuance_commitment("Alice", "asset_id", "asset_name", "asset_data", "BSV")
         self.assertIsNotNone(result)
         (cpid, cp) = result  # type: ignore
         self.assertTrue(isinstance(cpid, str))

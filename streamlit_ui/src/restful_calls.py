@@ -100,7 +100,7 @@ def get_commitment_metadata(cpid):
         return None
     
 # Create the Issuance
-def create_issuance(actor, asset_id, asset_data, network):
+def create_issuance(actor, asset_id, asset_name, asset_data, network):
     url = f"{st.session_state.commitment_service_url}/commitments/issuance"
     headers = {
         'accept': 'application/json',
@@ -109,6 +109,7 @@ def create_issuance(actor, asset_id, asset_data, network):
     data = {
         'actor': actor,
         'asset_id': asset_id,
+        'asset_name': asset_name,
         'asset_data': asset_data,
         'network': network,
     }

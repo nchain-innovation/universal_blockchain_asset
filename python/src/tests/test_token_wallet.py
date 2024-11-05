@@ -63,6 +63,7 @@ class TokenWalletTest(unittest.TestCase):
 
     def test_sign_and_verify_with_nist256_commitment_packet(self):
         cp: CommitmentPacket = CommitmentPacket(asset_id="Murphys Asset",
+                                                asset_name="asset name",
                                                 data="Murphys_Asset_data",
                                                 previous_packet="6957ca6359234cf5f7705edda20fa21039a6c1124d216cbc4ab6b5b298eeaacd",
                                                 blockchain_outpoint="6e59cf55510fb810ae51e2948ae27055559e6795f56c85a2c8c7171eac98ed48:1",

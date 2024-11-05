@@ -11,7 +11,8 @@ class CommitmentPacket(BaseModel):
     """ Store information about Commitment Packet
     """
     asset_id: str
-    data: str
+    asset_name: str
+    data: str           # Used to store hash of the image
     # Input
     previous_packet: None | str
     signature: None | str

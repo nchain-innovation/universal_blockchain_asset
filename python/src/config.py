@@ -16,6 +16,5 @@ def load_config(filename: str) -> ConfigType:
             config = toml.load(f)
         return config
     except FileNotFoundError as e:
-        print(f"load_config - File not found error {e}")
         LOGGER.warning(f"load_config - File not found error {e}")
         return {}
