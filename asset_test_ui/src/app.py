@@ -6,7 +6,9 @@ import io
 
 
 #  ---------------------------------------------------------
-def create_asset(username: str, file: UploadedFile) -> dict:
+# def create_asset(username: str, file: UploadedFile) -> dict:
+def create_asset(username: str, file: UploadedFile, name: str = None, description: str = None, network: str = None) -> dict:
+
     """ Create an Asset """
     
     url = f"http://uba_service:8040/asset/create"
@@ -16,7 +18,12 @@ def create_asset(username: str, file: UploadedFile) -> dict:
     file_content = file.read()
     
     files = {"file": (file.name, file_content, file.type)}
-    data = {"username": username}
+    data = {
+        "actor": username,
+        "name": name,
+        "description": description,
+        "network": network
+    }
     
     try:
         response = requests.post(url, files=files, data=data)
@@ -69,28 +76,40 @@ def create_asset_tab():
     col1, col2 = st.columns(2)
 
     with col1:
-
         # Display the uploaded image
         if uploaded_image is not None:
+
             # Open the image file
             image = Image.open(uploaded_image)
 
             # Display the image
             st.image(image, caption="Uploaded Image.", use_column_width=True)
 
-    with col2:
-        if uploaded_image is not None:
             filename = uploaded_image.name
             st.markdown(f"**Filename:** {filename}")
 
-            # When the "Create Asset" button is clicked
-            if st.button("Create Asset"):
+    with col2:
+        if uploaded_image is not None:
 
-                 # Text input for username
+            with st.form(key="create_asset_form"):
+                st.write("Enter asset details:")
+
+                # Text input for username
                 username = st.text_input("Enter username", value="Alice")
+                name = st.text_input("Enter asset name", value="")
+                description = st.text_input("Enter asset description", value="")
+                network = st.selectbox("Select network", ["BSV", "ETH"], index=0)
+
+                # When the "Create Asset" button is clicked
+                submit_button = st.form_submit_button("Create Asset")
+
+            # When the "Create Asset" button is clicked
+            if submit_button:
+
+                
 
                 # Call create-asset
-                result = create_asset(username=username, file=uploaded_image)
+                result = create_asset(username=username, file=uploaded_image, name=name, description=description, network=network)
 
                 if result.get("message") == "success":
                     asset_id = result.get("asset_id")
