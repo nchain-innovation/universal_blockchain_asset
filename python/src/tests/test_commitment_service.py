@@ -196,6 +196,7 @@ class TestCommitmentService(unittest.TestCase):
                 name='asset_name',
                 description='asset_name data',
                 file_hash='file_hash',
+                filename='filename',
                 cpid='')
         }
 

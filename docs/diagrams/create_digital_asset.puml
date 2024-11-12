@@ -20,10 +20,10 @@ end box
 activate Alice
 Alice -> API: Asset Create\n(actor, image, name, description, network) 
 activate API
-API -> TS: Asset Create\n(actor, image, name, description) 
+API -> TS: Asset Create\n(file_content, filename, actor, name, description) 
 activate TS
 
-TS -> FS: Add Token\n(token_descriptor)
+TS -> FS: Save File\n(file_content, filename)
 note left of FS : Image data is\nstored on disk
 activate FS
 FS --> TS: success
@@ -34,7 +34,7 @@ deactivate TS
 
 
 
-API -> CS: Commitment Issue\n(actor, asset_id, asset_hash, network)
+API -> CS: Commitment Issue\n(actor, asset_id, name, file_hash, network)
 activate CS
 CS -> TS: Check Token ID
 activate TS
@@ -54,7 +54,34 @@ deactivate TS
 note right of CS : CPID metadata\nsaved in\nCommitment Store
 CS --> API: CPID and Metadata
 deactivate CS
-API --> Alice: CPID and Metadata
+API --> Alice: actor, asset_id, Status
+deactivate API
+
+...
+
+Alice -> API: Asset Retrieve Market()
+activate API
+API -> TS: Get All Assigned Tokens()
+activate TS
+TS -> API: assigned_tokens
+deactivate TS
+' Loop for each actor
+loop for each actor
+    ' Loop for each token
+    loop for each token
+        API -> TS: Get Token Filepath(asset_id, actor)
+        activate TS
+        TS -> TS: Get Token Filename(asset_id, actor)
+        TS -> FS: Get File Path(filename)
+        activate FS
+        FS --> TS: file_path
+        deactivate FS
+        TS --> API: file_path, filename
+        deactivate TS
+    end loop
+end loop
+
+API --> Alice: Asset List\n(asset_id, name, description, cpid, image_url)
 deactivate API
 
 ...
@@ -62,13 +89,13 @@ deactivate API
 
 Alice -> API: Asset Retrieve\n(asset_id, actor) 
 activate API
-API -> TS: Asset Retrieve\n(asset_id, actor) 
+API -> TS: Get Token Filepath\n(asset_id, actor) 
 activate TS
-TS -> FS: Get File\n(asset_id)
+TS -> FS: Get File Path\n(filename)
 activate FS
-FS --> TS: File, filename
+FS --> TS: file_path
 deactivate FS
-TS --> API: File, filename
+TS --> API: file_path, filename
 note right of API: Stream image \nfrom disk
 deactivate TS
 API --> Alice: File, filename

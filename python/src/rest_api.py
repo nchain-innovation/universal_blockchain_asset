@@ -2,33 +2,87 @@ import os
 
 from fastapi import FastAPI, Response, status, HTTPException, Form, UploadFile, File
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from starlette.responses import FileResponse
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List
 from pydantic import BaseModel
+from pathlib import Path
 
 from service.commitment_service import commitment_service
 from service.token_description import token_store
 
 
+# Constants and Configurations
 CONFIG_FILE = "../data/uba-server.toml" if os.environ.get("APP_ENV") == "docker" else "../../data/uba-server.toml"
+IMAGE_DIR = Path("/app/data/images")
 
-
-tags_metadata = [
-    {
-        "name": "UBA Token System REST API",
-        "description": "UBA Token System REST API",
-    },
-]
-
-
+# FastAPI App Initialization
 app = FastAPI(
     title="UBA Token System REST API",
     description="UBA Token System REST API",
-    openapi_tags=tags_metadata,
+    openapi_tags=[
+        {
+            "name": "UBA Token System REST API",
+            "description": "UBA Token System REST API",
+        },
+    ],
 )
 
+# Mount Static Files
+app.mount("/images", StaticFiles(directory=IMAGE_DIR), name="images")
 
+
+# Pydantic Models
+class Asset(BaseModel):
+    asset_id: str
+    name: str
+    description: str
+    cpid: str
+    image_url: str
+
+
+class IssuanceParameters(BaseModel):
+    actor: str
+    asset_id: str
+    asset_name: str
+    asset_data: str
+    network: str
+
+
+class TemplateParameters(BaseModel):
+    cpid: str
+    actor: str
+    network: str
+
+
+class CompleteTransferParameters(BaseModel):
+    cpid: str
+    actor: str
+
+
+# Utility Functions and Services
+def create_issuance_packet(actor: str, asset_id: str, asset_name: str, asset_data: str, network: str) -> Response:
+    if not commitment_service.is_known_actor(actor):
+        return JSONResponse(content={"message": f"Unknown actor {actor}"}, status_code=status.HTTP_400_BAD_REQUEST)
+
+    if not commitment_service.is_known_network(network):
+        return JSONResponse(content={"message": f"Unknown network {network}"}, status_code=status.HTTP_400_BAD_REQUEST)
+
+    if not commitment_service.is_commitment_unique(asset_id, asset_data, network):
+        return JSONResponse(content={"message": "This UBA already exists"}, status_code=status.HTTP_400_BAD_REQUEST)
+
+    cpid_commitment = commitment_service.create_issuance_commitment(
+        actor, asset_id, asset_name, asset_data, network)
+    if cpid_commitment is not None:
+        (cpid, commitment) = cpid_commitment
+        serialised_commitment = commitment.model_dump()
+        return JSONResponse(content={"message": {cpid: serialised_commitment}}, status_code=status.HTTP_200_OK)
+    else:
+        return JSONResponse(content={"message": "Unable to create UBA packet"}, status_code=status.HTTP_400_BAD_REQUEST)
+
+
+# API Endpoints
 @app.get("/status", tags=["Status"])
 def get_status() -> Dict[str, Any]:
     """ Status - returns the current service status and number of certificates held. """
@@ -191,16 +245,6 @@ def commitment_transaction_hash(cpid: str) -> Response:
     return JSONResponse(content={"message": {'Commitment_TX_Hash': tx_hash}}, status_code=status.HTTP_200_OK)
 
 
-class IssuanceParameters(BaseModel):
-    """ The parameters required to create a UBA
-    """
-    actor: str
-    asset_id: str
-    asset_name: str
-    asset_data: str
-    network: str
-
-
 @app.post("/asset/create", status_code=201, tags=["Assets"])
 async def asset_create(
     actor: str = Form(...),         # Get attributes from the form
@@ -253,26 +297,33 @@ def asset_retrieve(asset_id: str, actor: str) -> FileResponse:
         raise HTTPException(status_code=404, detail=str(e))
 
 
-def create_issuance_packet(actor: str, asset_id: str, asset_name: str, asset_data: str, network: str) -> Response:
-    """ Create an Issuance UBA Packet
-    """
-    if not commitment_service.is_known_actor(actor):
-        return JSONResponse(content={"message": f"Unknown actor {actor}"}, status_code=status.HTTP_400_BAD_REQUEST)
+@app.get("/asset/retrieve_market", tags=["Assets"], response_model=List[Asset])
+def asset_retrieve_market() -> List[Asset]:
+    """Retrieve all assigned assets and construct URLs."""
+    assigned_tokens = token_store.get_all_assigned_tokens()
+    assets = []
 
-    if not commitment_service.is_known_network(network):
-        return JSONResponse(content={"message": f"Unknown network {network}"}, status_code=status.HTTP_400_BAD_REQUEST)
+    for actor, tokens in assigned_tokens.items():
 
-    if not commitment_service.is_commitment_unique(asset_id, asset_data, network):
-        return JSONResponse(content={"message": "This UBA already exists"}, status_code=status.HTTP_400_BAD_REQUEST)
+        for token in tokens:
+            file_data = token_store.get_token_filepath(token.ipfs_cid, actor)
 
-    cpid_commitment = commitment_service.create_issuance_commitment(
-        actor, asset_id, asset_name, asset_data, network)
-    if cpid_commitment is not None:
-        (cpid, commitment) = cpid_commitment
-        serialised_commitment = commitment.model_dump()
-        return JSONResponse(content={"message": {cpid: serialised_commitment}}, status_code=status.HTTP_200_OK)
-    else:
-        return JSONResponse(content={"message": "Unable to create UBA packet"}, status_code=status.HTTP_400_BAD_REQUEST)
+            url = f"http://localhost:8040/images/{file_data['filename']}"  # Construct URL
+            print(f"URL: {url}")
+
+            cpid = ""
+            if token.cpid is not None:
+                cpid = token.cpid
+            asset = Asset(
+                asset_id=token.ipfs_cid,
+                name=token.name,
+                description=token.description,
+                cpid=cpid,
+                image_url=url
+            )
+            assets.append(asset)
+
+    return assets
 
 
 @app.post("/commitments/issuance", tags=["Tokens"])
@@ -280,14 +331,6 @@ def create_issuance_commitment(commit_param: IssuanceParameters) -> Response:
     """ Create an Issuance UBA Packet
     """
     return create_issuance_packet(commit_param.actor, commit_param.asset_id, commit_param.asset_name, commit_param.asset_data, commit_param.network)
-
-
-class TemplateParameters(BaseModel):
-    """ The parameters required to create a UBA packet template
-    """
-    cpid: str
-    actor: str
-    network: str
 
 
 @app.post("/commitments/template", tags=["Tokens"])
@@ -317,13 +360,6 @@ def create_transfer_template(commit_transfer_param: TemplateParameters) -> Respo
             return JSONResponse(content={"message": "Unable to create a transfer UBA packet template"}, status_code=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
         return JSONResponse(content={"message": f"Error: {e}"}, status_code=status.HTTP_400_BAD_REQUEST)
-
-
-class CompleteTransferParameters(BaseModel):
-    """ The parameters required to create a UBA packet template
-    """
-    cpid: str
-    actor: str
 
 
 @app.post("/commitments/complete", tags=["Tokens"])

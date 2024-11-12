@@ -1,5 +1,5 @@
 from pydantic import BaseModel, validator
-from typing import Dict, List
+from typing import Dict, List, Optional
 from config import ConfigType
 import json
 import os
@@ -14,6 +14,7 @@ class token_descriptor(BaseModel):
     name: str
     description: str
     file_hash: str
+    filename: str
     cpid: None | str
 
     @validator('cpid', pre=True)
@@ -32,7 +33,7 @@ class token_descriptor(BaseModel):
 class TokenStore:
     def __init__(self):
         self.tokens: Dict = {}
-        self.assigned_tokens: Dict = {}
+        self.assigned_tokens: Dict[str, List[token_descriptor]] = {}
         self.filepath: str = ""
 
         # Initialise FileStorage with the allowed exensions
@@ -46,6 +47,7 @@ class TokenStore:
                 name=token["description"],
                 description=token["description"] + " data",
                 file_hash="file_hash",
+                filename="filename",
                 cpid="")
             self.tokens[token["ipfs_cid"]] = token_desc
 
@@ -71,9 +73,13 @@ class TokenStore:
                                 name=items["name"],
                                 description=items["description"],
                                 file_hash=items["file_hash"],
+                                filename=items["filename"],
                                 cpid=items["cpid"]))
+
+                            # remove from the tokens list
                             if items["ipfs_cid"] in self.tokens:
                                 self.tokens.pop(items["ipfs_cid"])
+
                         self.assigned_tokens[key] = tokens_per_actor
 
         except FileNotFoundError as e:
@@ -93,7 +99,7 @@ class TokenStore:
     def add_token(self, file_content: bytes, filename: str, actor: str, name: str, description: str) -> dict:
         """Add a new token to the token store.
         """
-        ret = self.file_storage.save_file(file_content, filename, actor)
+        ret = self.file_storage.save_file(file_content, filename)
 
         # Check if there was an error saving the file
         if "error" in ret:
@@ -104,14 +110,25 @@ class TokenStore:
         else:
             asset_id = ret["asset_id"]
             file_hash = ret["file_hash"]
+            filename = ret["filename"]
             token = token_descriptor(
                 ipfs_cid=asset_id,
                 name=name,
                 description=description,
                 file_hash=file_hash,
+                filename=filename,
                 cpid=None)
             self.tokens[asset_id] = token
             return ret
+
+    # ----------------------------------------------------------------
+    def get_token_by_ipfs_cid(self, asset_id: str) -> Optional[token_descriptor]:
+        """Extract the token_descriptor that matches the given ipfs_cid."""
+        for actor, tokens in self.assigned_tokens.items():
+            for token in tokens:
+                if token.ipfs_cid == asset_id:
+                    return token
+        return None
 
     # ----------------------------------------------------------------
     def get_token_filepath(self, asset_id: str, actor: str) -> dict:
@@ -121,11 +138,23 @@ class TokenStore:
             asset_id (str): The unique identifier for the asset.
             actor (str): The username of the actor.
         Returns:
-            dict: A dictionary containing the file path and original filename.
+            dict: A dictionary containing the file path and filename.
         Raises:
             ValueError: If the file is not found, or Username does not Match
         """
-        return self.file_storage.get_file_data(asset_id, actor)
+
+        # first check if the username is correct to retrieve the file
+        if self.check_token_id_actor(actor, asset_id) is False:
+            raise ValueError("Username does not match")
+
+        # get the file_descriptor
+        asset = self.get_token_by_ipfs_cid(asset_id)
+
+        filename = ""
+        if asset:
+            filename = asset.filename
+        file_path = self.file_storage.get_file_path(filename)
+        return {"file_path": file_path, "filename": filename}
 
     def __repr__(self) -> str:
         token_list: str = json.dumps(self.tokens, default=lambda o: o.model_dump())
@@ -150,6 +179,10 @@ class TokenStore:
         # save the file
         self.save()
         return True
+
+    def get_all_assigned_tokens(self) -> Dict[str, List[token_descriptor]]:
+        """Return all assigned tokens."""
+        return self.assigned_tokens
 
     def assign_to_new_actor(self, prev_actor: str, new_actor: str, token_id: str, cpid: str) -> bool:
         if prev_actor not in self.assigned_tokens:
@@ -215,6 +248,7 @@ class TokenStore:
         return True
 
     def check_token_id_actor(self, actor: str, token_id: str) -> bool:
+
         if actor not in self.assigned_tokens:
             print(f'Actor {actor} does not own token_id {token_id}')
             return False
@@ -225,9 +259,9 @@ class TokenStore:
         token_to_check: token_descriptor = matching_tokens.pop()
 
         if token_to_check is None:
-            print(f'Actor {actor} does not own token_id {token_id}')
-            return False
+            raise ValueError(f'Actor {actor} does not own token_id {token_id}')
 
+        print(f'Actor {actor} owns token_id {token_id}')
         return True
 
 
